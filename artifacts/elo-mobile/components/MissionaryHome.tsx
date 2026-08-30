@@ -13,7 +13,10 @@ import { Button } from './Button';
 import { useOfflineMode } from '../context/OfflineContext';
 import { Feather } from '@expo/vector-icons';
 import { ComposePostModal } from './ComposePostModal';
-import { formatPendingBytes } from '../context/syncState';
+import {
+  formatPendingBytes,
+  sortMissionaryFeedPosts,
+} from '../context/syncState';
 
 export function MissionaryHome() {
   const colors = useColors();
@@ -33,9 +36,7 @@ export function MissionaryHome() {
     remote.forEach((p) => map.set(p.id, p));
     localPosts.forEach((p) => map.set(p.id, p));
     
-    return Array.from(map.values()).sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return sortMissionaryFeedPosts(Array.from(map.values()));
   }, [serverPosts, localPosts]);
 
   return (

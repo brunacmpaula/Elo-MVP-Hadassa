@@ -98,6 +98,21 @@ export function mergePublishedPost(
   );
 }
 
+export function sortMissionaryFeedPosts(posts: Post[]): Post[] {
+  return [...posts].sort((a, b) => {
+    const aIsUnpublished = a.status !== 'PUBLISHED';
+    const bIsUnpublished = b.status !== 'PUBLISHED';
+
+    if (aIsUnpublished !== bIsUnpublished) {
+      return aIsUnpublished ? -1 : 1;
+    }
+
+    return (
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  });
+}
+
 export function getQueueSummary(queue: SyncOp[]): QueueSummary {
   return dedupeQueue(queue).reduce<QueueSummary>(
     (summary, operation) => ({

@@ -52,6 +52,7 @@ import {
   markOperationSyncing,
   markOperationSucceeded,
   mergePublishedPost,
+  sortMissionaryFeedPosts,
   getQueueSummary,
   getSyncBlockReason,
 } from '../context/syncState.ts';
@@ -229,6 +230,31 @@ test('merges the confirmed post into feed caches in newest-first order', () => {
     ['post-server-1', 'post-older'],
   );
   assert.deepEqual(mergePublishedPost(undefined, published), [published]);
+});
+
+test('keeps unpublished missionary posts at the top of the feed', () => {
+  const published = makePost({
+    id: 'post-published',
+    status: 'PUBLISHED',
+    createdAt: '2026-08-30T04:00:00.000Z',
+  });
+  const failed = makePost({
+    id: 'post-failed',
+    status: 'SYNC_FAILED',
+    createdAt: '2026-08-30T02:00:00.000Z',
+  });
+  const pending = makePost({
+    id: 'post-pending',
+    status: 'PENDING_SYNC',
+    createdAt: '2026-08-30T01:00:00.000Z',
+  });
+
+  assert.deepEqual(
+    sortMissionaryFeedPosts([published, pending, failed]).map(
+      (post) => post.id,
+    ),
+    ['post-failed', 'post-pending', 'post-published'],
+  );
 });
 
 test('adopts a newer canonical server version after acknowledgement', () => {
