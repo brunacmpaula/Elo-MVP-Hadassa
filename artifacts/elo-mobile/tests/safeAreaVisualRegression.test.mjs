@@ -15,6 +15,7 @@ const sources = {
   rootLayout: source('app/_layout.tsx'),
   tabsLayout: source('app/(tabs)/_layout.tsx'),
   safeArea: source('components/AppSafeAreaView.tsx'),
+  packageJson: source('package.json'),
   login: source('app/index.tsx'),
   button: source('components/Button.tsx'),
   missionaryHome: source('components/MissionaryHome.tsx'),
@@ -27,6 +28,9 @@ const sources = {
   postDetail: source('app/post/[id].tsx'),
   compose: source('components/ComposePostModal.tsx'),
 };
+
+const packageManifest = JSON.parse(sources.packageJson);
+const nativeTabsPolicy = packageManifest.safeAreaPolicy?.nativeTabs;
 
 const devices = [
   {
@@ -243,6 +247,12 @@ function safeFrame(device) {
   };
 }
 
+function declaredVersion(dependency) {
+  const match = dependency?.match(/(\d+)\.(\d+)\.(\d+)/);
+  assert.ok(match, `dependency must declare a semver-compatible version: ${dependency}`);
+  return { major: Number(match[1]), minor: Number(match[2]) };
+}
+
 test('keeps the safe-area provider and platform policies wired at the app boundary', () => {
   assert.match(sources.rootLayout, /<SafeAreaProvider>/);
   assert.match(sources.rootLayout, /<RootLayoutNav \/>/);
@@ -251,6 +261,38 @@ test('keeps the safe-area provider and platform policies wired at the app bounda
   assert.match(sources.safeArea, /WEB_BOTTOM_INSET = 34/);
   assert.match(sources.safeArea, /top: Platform\.OS === 'web' \? WEB_TOP_INSET : insets\.top/);
   assert.match(sources.safeArea, /bottom: Platform\.OS === 'web' \? WEB_BOTTOM_INSET : insets\.bottom/);
+});
+
+test('pins NativeTabs geometry to the supported Expo and iOS contract', () => {
+  assert.deepEqual(nativeTabsPolicy, {
+    expoSdkMajor: 54,
+    expoRouterMajor: 6,
+    expoGlassEffectMinor: 1,
+    minimumIosMajor: 26,
+    visibleTabBarHeight: 50,
+  });
+
+  assert.equal(
+    declaredVersion(packageManifest.devDependencies.expo).major,
+    nativeTabsPolicy.expoSdkMajor,
+    'NativeTabs clearance must be rechecked when the Expo SDK major changes',
+  );
+  assert.equal(
+    declaredVersion(packageManifest.devDependencies['expo-router']).major,
+    nativeTabsPolicy.expoRouterMajor,
+    'NativeTabs clearance must be rechecked when the Expo Router major changes',
+  );
+  assert.equal(
+    declaredVersion(packageManifest.devDependencies['expo-glass-effect']).minor,
+    nativeTabsPolicy.expoGlassEffectMinor,
+    'Liquid Glass availability must be rechecked when expo-glass-effect changes',
+  );
+  assert.equal(nativeTabsPolicy.minimumIosMajor, 26);
+  assert.match(
+    sources.safeArea,
+    new RegExp(`NATIVE_TAB_BAR_HEIGHT = ${nativeTabsPolicy.visibleTabBarHeight}\\b`),
+  );
+  assert.match(sources.safeArea, /Expo SDK 54 \/ Router 6 on iOS 26\+/);
 });
 
 test('keeps the login brand text-only while preserving its entry controls', () => {
@@ -311,7 +353,10 @@ test('keeps both tab-bar modes safe on iPhone, Android and web', () => {
   assert.match(sources.tabsLayout, /\.\.\.\(isWeb \? \{ height: 84 \} : \{\}\)/);
   assert.match(sources.tabsLayout, /<NativeTabs>/);
   assert.match(sources.tabsLayout, /return <ClassicTabLayout \/>/);
-  assert.match(sources.safeArea, /NATIVE_TAB_BAR_HEIGHT = 50/);
+  assert.match(
+    sources.safeArea,
+    new RegExp(`NATIVE_TAB_BAR_HEIGHT = ${nativeTabsPolicy.visibleTabBarHeight}\\b`),
+  );
   assert.match(sources.safeArea, /contentInsetAdjustmentBehavior: 'automatic' \| 'never'/);
   assert.match(sources.safeArea, /return NATIVE_TAB_BAR_HEIGHT/);
   assert.match(sources.safeArea, /bottom \+ NATIVE_TAB_BAR_HEIGHT/);

@@ -11,7 +11,9 @@ const WEB_BOTTOM_INSET = 34;
 const CLASSIC_TAB_BAR_CLEARANCE = 84;
 // NativeTabs' visible tab controls occupy this height above the device inset.
 // Scroll views using automatic adjustment receive the bottom inset from iOS.
-const NATIVE_TAB_BAR_HEIGHT = 50;
+// This is the NativeTabs contract for Expo SDK 54 / Router 6 on iOS 26+.
+// Keep it in sync with safeAreaPolicy.nativeTabs in package.json.
+export const NATIVE_TAB_BAR_HEIGHT = 50;
 
 type AppSafeAreaViewProps = React.ComponentProps<typeof SafeAreaView>;
 

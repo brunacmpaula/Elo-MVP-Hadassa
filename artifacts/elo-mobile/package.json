@@ -10,6 +10,15 @@
     "test": "node --no-warnings --test tests/*.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "safeAreaPolicy": {
+    "nativeTabs": {
+      "expoSdkMajor": 54,
+      "expoRouterMajor": 6,
+      "expoGlassEffectMinor": 1,
+      "minimumIosMajor": 26,
+      "visibleTabBarHeight": 50
+    }
+  },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@expo-google-fonts/inter": "^0.4.0",

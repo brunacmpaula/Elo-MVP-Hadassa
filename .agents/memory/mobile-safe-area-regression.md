@@ -21,3 +21,15 @@ scroll view creates duplicated space.
 **How to apply:** Keep automatic and manual callers explicit when using the shared
 tab-padding policy, and leave the classic-tab formula unchanged for Android, web,
 and older iOS.
+
+NativeTabs dependency upgrades must update the declared supported-stack policy and
+the deterministic geometry matrix in the same change; do not silently change the
+50pt clearance.
+
+**Why:** The visible native tab controls are supplied by Expo/iOS rather than by
+the app, so an upstream geometry change can hide controls without producing a
+TypeScript or JavaScript error.
+
+**How to apply:** Treat Expo SDK, Expo Router, and Liquid Glass package changes as
+safe-area changes. Reconfirm the iOS support floor and visible tab-bar height
+before accepting the upgrade.
