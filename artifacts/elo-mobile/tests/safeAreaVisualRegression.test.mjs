@@ -702,13 +702,13 @@ test('keeps the native image-picker runner aligned with app selectors and payloa
   assert.match(sources.postCard, /testID="post-media"/);
   assert.match(
     sources.postCard,
-    /post\.type === 'NEED'/,
-    'need posts must render a generic image when media is unavailable',
+    /post\.type === 'UPDATE' && post\.media\.length > 0/,
+    'only update posts with media may render an image section',
   );
-  assert.match(
+  assert.doesNotMatch(
     sources.postCard,
     /genericNeedImage/,
-    'need posts must use the generic Elo image asset',
+    'need posts must not receive a generic image fallback',
   );
 
   for (const [platform, flow] of [

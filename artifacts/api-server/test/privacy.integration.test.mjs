@@ -476,6 +476,20 @@ test("preferences persist and redact public profile data", async (t) => {
       }),
     });
     assert.equal(invalidMediaPost.response.status, 400);
+    const needWithMedia = await jsonRequest("/posts", {
+      method: "POST",
+      headers: missionaryHeaders,
+      body: JSON.stringify({
+        ...mediaPostInput,
+        type: "NEED",
+        clientOperationId: "invalid-need-media",
+      }),
+    });
+    assert.equal(needWithMedia.response.status, 400);
+    assert.equal(
+      needWithMedia.body.error,
+      "Apenas atualizações podem conter imagens",
+    );
 
     const unauthenticatedUpdate = await jsonRequest("/posts/post-school", {
       method: "PATCH",
@@ -529,6 +543,32 @@ test("preferences persist and redact public profile data", async (t) => {
     });
     assert.equal(ownerSync.response.status, 200);
     assert.equal(ownerSync.body.acks[0].status, "SYNCED");
+    const invalidNeedSync = await jsonRequest("/sync", {
+      method: "POST",
+      headers: missionaryHeaders,
+      body: JSON.stringify({
+        operations: [
+          {
+            operationId: "invalid-need-media-sync",
+            entityType: "POST",
+            entityId: "invalid-need-media-sync-post",
+            operationType: "CREATE",
+            payload: {
+              type: "NEED",
+              title: "Necessidade sem imagem",
+              content: "Imagens não são aceitas em necessidades.",
+              media: [mediaPayload],
+            },
+          },
+        ],
+      }),
+    });
+    assert.equal(invalidNeedSync.response.status, 200);
+    assert.equal(invalidNeedSync.body.acks[0].status, "FAILED");
+    assert.equal(
+      invalidNeedSync.body.acks[0].error,
+      "Apenas atualizações podem conter imagens",
+    );
 
     const syncedPublicPost = await jsonRequest(
       "/posts/privacy-test-synced-post",

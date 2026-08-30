@@ -1038,6 +1038,12 @@ router.post("/posts", async (req, res) => {
     return;
   }
   const input = parsedInput.data;
+  if (input.type !== "UPDATE" && (input.media?.length ?? 0) > 0) {
+    res.status(400).json({
+      error: "Apenas atualizações podem conter imagens",
+    });
+    return;
+  }
   const existingId = processedOperations.get(input.clientOperationId);
   const existing = existingId
     ? posts.find((post) => post.id === existingId)
@@ -1373,6 +1379,14 @@ router.post("/sync", async (req, res) => {
         status: "FAILED" as const,
         entityId: operation.entityId,
         error: "Operação inválida",
+      };
+    }
+    if (payload.type !== "UPDATE" && (payload.media?.length ?? 0) > 0) {
+      return {
+        operationId: operation.operationId,
+        status: "FAILED" as const,
+        entityId: operation.entityId,
+        error: "Apenas atualizações podem conter imagens",
       };
     }
 
