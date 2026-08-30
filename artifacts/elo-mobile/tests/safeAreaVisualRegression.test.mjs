@@ -208,8 +208,8 @@ const screenScenarios = [
     required: [
       'useAppSafeAreaInsets',
       'KeyboardAwareScrollViewCompat',
-      'bottomOffset={16}',
-      'extraKeyboardSpace={Math.max(bottom, 24)}',
+      'bottomOffset={24}',
+      'extraKeyboardSpace={Math.max(bottom, 72)}',
       'contentContainerStyle={{ paddingBottom: bottom + 24 }}',
       'testID="post-detail-screen"',
       'testID="pray-for-post"',

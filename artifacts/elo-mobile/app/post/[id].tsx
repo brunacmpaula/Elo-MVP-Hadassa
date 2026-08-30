@@ -1,5 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Image, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  Image,
+  TextInput,
+  Keyboard,
+  type ScrollView,
+} from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   useCreatePostComment,
@@ -43,6 +52,8 @@ export default function PostDetailScreen() {
   } = useSync();
   const [comment, setComment] = React.useState('');
   const [commentError, setCommentError] = React.useState<string | null>(null);
+  const commentScrollRef = React.useRef<ScrollView>(null);
+  const commentInputFocused = React.useRef(false);
   const [availabilityError, setAvailabilityError] = React.useState<string | null>(null);
   const isLocalPostId = Boolean(id?.startsWith('local_'));
   const localPost = isLocalPostId
@@ -106,6 +117,21 @@ export default function PostDetailScreen() {
       },
     );
   };
+
+  const scrollToCommentComposer = React.useCallback(() => {
+    setTimeout(() => {
+      commentScrollRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, []);
+
+  React.useEffect(() => {
+    const keyboardSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      if (commentInputFocused.current) {
+        scrollToCommentComposer();
+      }
+    });
+    return () => keyboardSubscription.remove();
+  }, [scrollToCommentComposer]);
 
   const handlePray = () => {
     if (!post) return;
@@ -208,10 +234,11 @@ export default function PostDetailScreen() {
 
   return (
     <KeyboardAwareScrollViewCompat
+      ref={commentScrollRef}
       testID="post-detail-screen"
       style={[styles.container, { backgroundColor: colors.background }]}
-      bottomOffset={16}
-      extraKeyboardSpace={Math.max(bottom, 24)}
+      bottomOffset={24}
+      extraKeyboardSpace={Math.max(bottom, 72)}
       keyboardDismissMode="on-drag"
       contentInsetAdjustmentBehavior="never"
       contentContainerStyle={{ paddingBottom: bottom + 24 }}
@@ -392,6 +419,13 @@ export default function PostDetailScreen() {
             <TextInput
               value={comment}
               onChangeText={setComment}
+              onFocus={() => {
+                commentInputFocused.current = true;
+                scrollToCommentComposer();
+              }}
+              onBlur={() => {
+                commentInputFocused.current = false;
+              }}
               placeholder="Escreva um comentário de apoio"
               placeholderTextColor={colors.mutedForeground}
               multiline
