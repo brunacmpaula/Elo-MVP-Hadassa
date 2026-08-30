@@ -9,8 +9,8 @@
   },
   "scripts": {
     "check-schema": "node ./src/check-schema.ts",
-    "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
+    "push": "drizzle-kit push --config ./drizzle.config.ts && node ./src/seed-missionary-follows.ts",
+    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts && node ./src/seed-missionary-follows.ts",
     "test": "node --test ./test/*.test.mjs"
   },
   "dependencies": {

@@ -98,6 +98,13 @@ test("a need and its availability survive an API restart", async (t) => {
   assert.equal(availability.body.postId, postId);
   assert.equal(availability.body.availabilityCount, 1);
 
+  const follow = await jsonRequest("/missionaries/missionary-ana/follow", {
+    method: "POST",
+    headers: supporterHeaders,
+  });
+  assert.equal(follow.response.status, 200);
+  assert.equal(follow.body.isFollowed, true);
+
   const commentPayload = {
     content: "Vou acompanhar esta necessidade em oração.",
     clientOperationId: `${clientOperationId}-comment`,
@@ -120,8 +127,19 @@ test("a need and its availability survive an API restart", async (t) => {
   assert.equal(restoredPost.body.id, postId);
   assert.equal(restoredPost.body.title, "Necessidade persistente");
   assert.equal(restoredPost.body.type, "NEED");
+  assert.equal(restoredPost.body.missionarySaved, true);
   assert.equal(restoredPost.body.contributionAvailabilityCount, 1);
   assert.equal(restoredPost.body.contributionAvailableByMe, true);
+
+  const restoredMissionaries = await jsonRequest("/missionaries", {
+    headers: supporterHeaders,
+  });
+  assert.equal(restoredMissionaries.response.status, 200);
+  assert.equal(
+    restoredMissionaries.body.find((item) => item.id === "missionary-ana")
+      .isFollowed,
+    true,
+  );
 
   const retriedComment = await jsonRequest(`/posts/${postId}/comments`, {
     method: "POST",
@@ -148,5 +166,32 @@ test("a need and its availability survive an API restart", async (t) => {
       .filter((item) => item.postId === postId)
       .map((item) => item.supporterName),
     ["Bruno"],
+  );
+
+  const unfollow = await jsonRequest("/missionaries/missionary-ana/follow", {
+    method: "DELETE",
+    headers: supporterHeaders,
+  });
+  assert.equal(unfollow.response.status, 200);
+  assert.equal(unfollow.body.isFollowed, false);
+
+  await stopServer(server);
+  server = startServer();
+  await waitForServer(server);
+
+  const afterUnfollow = await jsonRequest(`/posts/${postId}`, {
+    headers: supporterHeaders,
+  });
+  assert.equal(afterUnfollow.response.status, 200);
+  assert.equal(afterUnfollow.body.missionarySaved, false);
+
+  const missionariesAfterUnfollow = await jsonRequest("/missionaries", {
+    headers: supporterHeaders,
+  });
+  assert.equal(missionariesAfterUnfollow.response.status, 200);
+  assert.equal(
+    missionariesAfterUnfollow.body.find((item) => item.id === "missionary-ana")
+      .isFollowed,
+    false,
   );
 });

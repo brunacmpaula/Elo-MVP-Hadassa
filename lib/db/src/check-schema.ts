@@ -1,8 +1,8 @@
 import { pathToFileURL } from "node:url";
 import pg from "pg";
-import {
-  contributionAvailabilitiesDatabaseSchema,
-} from "./schema/contributionAvailabilities.ts";
+import { contributionAvailabilitiesDatabaseSchema } from "./schema/contributionAvailabilities.ts";
+import { missionaryFollowsDatabaseSchema } from "./schema/missionaryFollows.ts";
+import { missionaryFollowSeedStateDatabaseSchema } from "./schema/missionaryFollowSeedState.ts";
 import { postsDatabaseSchema } from "./schema/posts.ts";
 import { profilePreferencesDatabaseSchema } from "./schema/profilePreferences.ts";
 
@@ -10,6 +10,8 @@ const databaseSchemas = [
   profilePreferencesDatabaseSchema,
   postsDatabaseSchema,
   contributionAvailabilitiesDatabaseSchema,
+  missionaryFollowsDatabaseSchema,
+  missionaryFollowSeedStateDatabaseSchema,
 ] as const;
 
 type Queryable = {
@@ -29,12 +31,7 @@ type DatabaseColumn = {
 type DatabaseSchema = (typeof databaseSchemas)[number];
 type DatabaseColumnDefinition = {
   defaultKind:
-    | "none"
-    | "false"
-    | "empty-text-array"
-    | "zero"
-    | "now"
-    | "empty-json-array";
+    "none" | "false" | "empty-text-array" | "zero" | "now" | "empty-json-array";
 };
 
 const APPLY_SCHEMA_COMMAND = "pnpm --filter @workspace/db run push";
@@ -136,7 +133,9 @@ export async function findSchemaIssues(
     );
     for (const actualColumn of columnResult.rows) {
       if (!expectedColumnNames.has(actualColumn.column_name)) {
-        issues.push(`unexpected column ${tableName}.${actualColumn.column_name}`);
+        issues.push(
+          `unexpected column ${tableName}.${actualColumn.column_name}`,
+        );
       }
     }
 

@@ -29,6 +29,20 @@
       "when": 1788077642364,
       "tag": "0003_contribution_availability_feedback",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788077959957,
+      "tag": "0004_add_missionary_follows",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788078193993,
+      "tag": "0005_add_missionary_follow_seed_state",
+      "breakpoints": true
     }
   ]
 }

@@ -38,6 +38,7 @@ import {
   contributionAvailabilitiesTable,
   contributionAvailabilityFeedbackTable,
   db,
+  missionaryFollowsTable,
   postsTable,
   profilePreferencesTable,
 } from "@workspace/db";
@@ -231,9 +232,6 @@ const defaultPosts: Post[] = [
 let posts: Post[] = [];
 const processedOperations = new Map<string, string>();
 const processedComments = new Map<string, string>();
-const followedMissionariesByUser = new Map<string, Set<string>>([
-  ["user-supporter", new Set(["missionary-ana", "missionary-joao"])],
-]);
 const router: IRouter = Router();
 const DEFAULT_PROFILE_PREFERENCES: ProfilePreferences = {
   hiddenFields: [],
@@ -645,13 +643,12 @@ function ensureSupporterUser(req: Request, res: Response) {
   return user;
 }
 
-function getFollowedMissionaries(userId: string) {
-  let followed = followedMissionariesByUser.get(userId);
-  if (!followed) {
-    followed = new Set();
-    followedMissionariesByUser.set(userId, followed);
-  }
-  return followed;
+async function getFollowedMissionaries(userId: string) {
+  const records = await db
+    .select({ missionaryId: missionaryFollowsTable.missionaryId })
+    .from(missionaryFollowsTable)
+    .where(eq(missionaryFollowsTable.supporterId, userId));
+  return new Set(records.map((record) => record.missionaryId));
 }
 
 const MAX_MEDIA_BYTES = 1_500_000;
@@ -741,13 +738,14 @@ async function toPublicMissionary(
     country,
     ...alwaysPublic
   } = missionary;
+  const followedMissionaries =
+    viewer?.role === "SUPPORTER"
+      ? await getFollowedMissionaries(viewer.id)
+      : null;
 
   return {
     ...alwaysPublic,
-    isFollowed:
-      viewer?.role === "SUPPORTER"
-        ? getFollowedMissionaries(viewer.id).has(missionary.id)
-        : false,
+    isFollowed: followedMissionaries?.has(missionary.id) ?? false,
     ...(isOwner || !preferences.hiddenFields.includes("email") ? { email } : {}),
     ...(isOwner || !preferences.hiddenFields.includes("bio") ? { bio } : {}),
     ...(isOwner || !preferences.hiddenFields.includes("location")
@@ -766,12 +764,13 @@ async function toPublicPost(post: Post, viewer: SessionUser | null) {
     post,
     viewer,
   );
+  const followedMissionaries =
+    viewer?.role === "SUPPORTER"
+      ? await getFollowedMissionaries(viewer.id)
+      : null;
   const viewerPost = {
     ...post,
-    missionarySaved:
-      viewer?.role === "SUPPORTER"
-        ? getFollowedMissionaries(viewer.id).has(post.missionaryId)
-        : false,
+    missionarySaved: followedMissionaries?.has(post.missionaryId) ?? false,
     contributionAvailabilityCount:
       contributionAvailability.availabilityCount,
     contributionAvailableByMe: contributionAvailability.availableByMe,
@@ -1012,7 +1011,7 @@ router.patch("/missionaries/:missionaryId/preferences", async (req, res) => {
   res.json(UpdateMissionaryPreferencesResponse.parse(saved));
 });
 
-router.post("/missionaries/:missionaryId/follow", (req, res) => {
+router.post("/missionaries/:missionaryId/follow", async (req, res) => {
   const missionary = findMissionary(req.params["missionaryId"] ?? "");
   if (!missionary) {
     res.status(404).json({ error: "Missionário não encontrado" });
@@ -1020,7 +1019,13 @@ router.post("/missionaries/:missionaryId/follow", (req, res) => {
   }
   const supporter = ensureSupporterUser(req, res);
   if (!supporter) return;
-  getFollowedMissionaries(supporter.id).add(missionary.id);
+  await db
+    .insert(missionaryFollowsTable)
+    .values({
+      supporterId: supporter.id,
+      missionaryId: missionary.id,
+    })
+    .onConflictDoNothing();
   res.json(
     FollowMissionaryResponse.parse({
       missionaryId: missionary.id,
@@ -1029,7 +1034,7 @@ router.post("/missionaries/:missionaryId/follow", (req, res) => {
   );
 });
 
-router.delete("/missionaries/:missionaryId/follow", (req, res) => {
+router.delete("/missionaries/:missionaryId/follow", async (req, res) => {
   const missionary = findMissionary(req.params["missionaryId"] ?? "");
   if (!missionary) {
     res.status(404).json({ error: "Missionário não encontrado" });
@@ -1037,7 +1042,14 @@ router.delete("/missionaries/:missionaryId/follow", (req, res) => {
   }
   const supporter = ensureSupporterUser(req, res);
   if (!supporter) return;
-  getFollowedMissionaries(supporter.id).delete(missionary.id);
+  await db
+    .delete(missionaryFollowsTable)
+    .where(
+      and(
+        eq(missionaryFollowsTable.supporterId, supporter.id),
+        eq(missionaryFollowsTable.missionaryId, missionary.id),
+      ),
+    );
   res.json(
     UnfollowMissionaryResponse.parse({
       missionaryId: missionary.id,
@@ -1049,10 +1061,16 @@ router.delete("/missionaries/:missionaryId/follow", (req, res) => {
 router.get("/posts", async (req, res) => {
   await ensurePostsLoaded();
   const query = ListPostsQueryParams.parse(req.query);
-  const filtered = query.missionaryId
-    ? posts.filter((post) => post.missionaryId === query.missionaryId)
-    : posts;
   const viewer = getAuthenticatedUser(req);
+  const ownMissionary =
+    query.mine && viewer ? findMissionaryForUser(viewer.id) : undefined;
+  const filtered = query.mine
+    ? ownMissionary
+      ? posts.filter((post) => post.missionaryId === ownMissionary.id)
+      : []
+    : query.missionaryId
+      ? posts.filter((post) => post.missionaryId === query.missionaryId)
+      : posts;
   const publicPosts = await Promise.all(
     filtered.map((post) => toPublicPost(post, viewer)),
   );
