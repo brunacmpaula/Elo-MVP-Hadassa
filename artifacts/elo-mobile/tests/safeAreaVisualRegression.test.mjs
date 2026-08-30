@@ -700,6 +700,16 @@ test('keeps the native image-picker runner aligned with app selectors and payloa
     /testID=\{`post-image-preview-\$\{index \+ 1\}`\}/,
   );
   assert.match(sources.postCard, /testID="post-media"/);
+  assert.match(
+    sources.postCard,
+    /post\.type === 'NEED'/,
+    'need posts must render a generic image when media is unavailable',
+  );
+  assert.match(
+    sources.postCard,
+    /genericNeedImage/,
+    'need posts must use the generic Elo image asset',
+  );
 
   for (const [platform, flow] of [
     ['iOS', sources.nativeIosFlow],

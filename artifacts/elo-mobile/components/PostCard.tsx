@@ -12,6 +12,8 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
 
+const genericNeedImage = require('../assets/images/elo-logo.png');
+
 interface PostCardProps {
   post: Post;
   isMissionary?: boolean;
@@ -134,20 +136,32 @@ export function PostCard({ post, isMissionary, syncMessage }: PostCardProps) {
         </Text>
       )}
 
-      {post.media.length > 0 && (
+      {(post.media.length > 0 || post.type === 'NEED') && (
         <View
           style={styles.mediaRow}
           testID="post-media"
-          accessibilityLabel={`${post.media.length === 1 ? '1 imagem' : `${post.media.length} imagens`} da publicação`}
+          accessibilityLabel={
+            post.media.length > 0
+              ? `${post.media.length === 1 ? '1 imagem' : `${post.media.length} imagens`} da publicação`
+              : 'Imagem genérica da necessidade'
+          }
         >
-          {post.media.slice(0, 3).map((item) => (
-            <Image
-              key={item.id}
-              source={{ uri: item.thumbnailUri }}
-              style={styles.mediaImage}
-              accessibilityLabel="Imagem da publicação"
-            />
-          ))}
+          {post.media.length > 0
+            ? post.media.slice(0, 3).map((item) => (
+                <Image
+                  key={item.id}
+                  source={{ uri: item.thumbnailUri }}
+                  style={styles.mediaImage}
+                  accessibilityLabel="Imagem da publicação"
+                />
+              ))
+            : (
+                <Image
+                  source={genericNeedImage}
+                  style={styles.genericNeedImage}
+                  accessibilityLabel="Imagem genérica da necessidade"
+                />
+              )}
         </View>
       )}
 
@@ -245,6 +259,12 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 110,
     borderRadius: 12,
+  },
+  genericNeedImage: {
+    width: '100%',
+    height: 110,
+    borderRadius: 12,
+    resizeMode: 'cover',
   },
   action: {
     flexDirection: 'row',
