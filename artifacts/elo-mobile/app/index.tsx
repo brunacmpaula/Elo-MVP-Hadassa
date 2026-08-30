@@ -14,7 +14,7 @@ export default function LoginScreen() {
   if (isLoading || isLoggingOut) {
     return (
       <AppSafeAreaView
-        testID="login-screen"
+        testID="login-loading-screen"
         style={[styles.container, { backgroundColor: colors.background }]}
       >
         <View style={styles.center}>
@@ -29,7 +29,10 @@ export default function LoginScreen() {
   }
 
   return (
-    <AppSafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <AppSafeAreaView
+      testID="login-ready-screen"
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <View style={styles.content}>
         <View style={styles.brand}>
           <Text style={[styles.title, { color: colors.foreground }]}>Elo414</Text>

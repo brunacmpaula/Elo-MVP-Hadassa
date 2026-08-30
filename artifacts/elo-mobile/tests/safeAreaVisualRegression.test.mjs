@@ -70,12 +70,12 @@ const screenScenarios = [
   {
     id: 'login',
     source: sources.login,
-    rootTestId: 'login-screen',
+    rootTestId: 'login-ready-screen',
     topClearance: (device) => device.insets.top,
     bottomClearance: (device) => device.insets.bottom,
     required: [
       '<AppSafeAreaView',
-      'testID="login-screen"',
+      'testID="login-ready-screen"',
       'testID="login-as-missionary"',
       'testID="login-as-supporter"',
     ],
@@ -310,6 +310,11 @@ test('keeps the login brand text-only while preserving its entry controls', () =
   assert.match(sources.login, />Elo414<\/Text>/);
   assert.doesNotMatch(sources.login, /Como você deseja entrar/);
   assert.match(sources.login, /Mesmo longe, juntos na missão\./);
+  assert.match(
+    sources.login,
+    /<AppSafeAreaView\s+testID="login-ready-screen"[\s\S]*?Elo414[\s\S]*?Mesmo longe, juntos na missão\./,
+    'the ready login screen must expose the stable visual-test root selector',
+  );
   assert.match(sources.login, /testID="login-as-missionary"/);
   assert.match(sources.login, /testID="login-as-supporter"/);
 });
