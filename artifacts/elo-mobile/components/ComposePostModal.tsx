@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { PostInputType } from '@workspace/api-client-react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppSafeAreaInsets } from './AppSafeAreaView';
 import { useColors } from '../hooks/useColors';
 import { useSync } from '../context/SyncContext';
 import { Button } from './Button';
@@ -37,7 +37,7 @@ export function ComposePostModal({
   onClose,
 }: ComposePostModalProps) {
   const colors = useColors();
-  const insets = useSafeAreaInsets();
+  const insets = useAppSafeAreaInsets();
   const { enqueueCreatePost } = useSync();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');

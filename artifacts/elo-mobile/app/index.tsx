@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { useColors } from '../hooks/useColors';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppSafeAreaView } from '../components/AppSafeAreaView';
 import { Feather } from '@expo/vector-icons';
 import { Redirect } from 'expo-router';
 
@@ -13,9 +13,11 @@ export default function LoginScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <Feather name="loader" size={24} color={colors.primary} />
-      </View>
+      <AppSafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.center}>
+          <Feather name="loader" size={24} color={colors.primary} />
+        </View>
+      </AppSafeAreaView>
     );
   }
 
@@ -24,7 +26,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <AppSafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
         <View style={styles.brand}>
           <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
@@ -57,7 +59,7 @@ export default function LoginScreen() {
           />
         </View>
       </View>
-    </SafeAreaView>
+    </AppSafeAreaView>
   );
 }
 

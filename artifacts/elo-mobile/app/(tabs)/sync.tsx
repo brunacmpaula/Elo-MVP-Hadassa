@@ -1,6 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  AppSafeAreaView,
+  useTabContentBottomPadding,
+  usesNativeTabs,
+} from '../../components/AppSafeAreaView';
 import { useSync } from '../../context/SyncContext';
 import { useColors } from '../../hooks/useColors';
 import { Feather } from '@expo/vector-icons';
@@ -10,9 +14,17 @@ import { formatTimeAgo, translatePostType } from '../../lib/utils';
 export default function SyncQueueScreen() {
   const { queue, syncNow, isSyncing } = useSync();
   const colors = useColors();
+  const listBottomPadding = useTabContentBottomPadding();
+  const nativeTabs = usesNativeTabs();
+  const footerBottomPadding = nativeTabs
+    ? 24
+    : Math.max(84, listBottomPadding - 16);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <AppSafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>Fila de Sincronização</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
@@ -33,6 +45,7 @@ export default function SyncQueueScreen() {
           <FlatList
             data={queue}
             keyExtractor={(item) => item.id}
+            contentInsetAdjustmentBehavior={nativeTabs ? 'automatic' : 'never'}
             contentContainerStyle={styles.list}
             renderItem={({ item }) => (
               <View style={[styles.item, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -84,7 +97,15 @@ export default function SyncQueueScreen() {
         )}
       </View>
       
-      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.footer,
+          {
+            borderTopColor: colors.border,
+            paddingBottom: footerBottomPadding,
+          },
+        ]}
+      >
         <Button
           title={isSyncing ? 'Sincronizando...' : 'Tentar Novamente'}
           icon="refresh-cw"
@@ -94,7 +115,7 @@ export default function SyncQueueScreen() {
           loading={isSyncing}
         />
       </View>
-    </SafeAreaView>
+    </AppSafeAreaView>
   );
 }
 
@@ -125,7 +146,8 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 20, fontFamily: 'Inter_600SemiBold', marginBottom: 8 },
   emptySub: { fontSize: 16, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   footer: {
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
     borderTopWidth: 1,
   },
 });

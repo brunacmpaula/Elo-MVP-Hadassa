@@ -7,6 +7,7 @@ import { formatTimeAgo, translatePostType } from '../../lib/utils';
 import { Button } from '../../components/Button';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAppSafeAreaInsets } from '../../components/AppSafeAreaView';
 import {
   hideCachedPostFields,
   PUBLIC_PRIVACY_QUERY_OPTIONS,
@@ -15,6 +16,7 @@ import {
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
+  const { bottom } = useAppSafeAreaInsets();
   const queryClient = useQueryClient();
   
   const { data: post, isLoading, isFetching, refetch } = useGetPost(id!, {
@@ -57,7 +59,11 @@ export default function PostDetailScreen() {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentInsetAdjustmentBehavior="never"
+      contentContainerStyle={{ paddingBottom: bottom + 24 }}
+    >
       <View style={styles.header}>
         <View style={styles.authorRow}>
           <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>

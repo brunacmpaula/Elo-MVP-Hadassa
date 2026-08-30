@@ -7,6 +7,7 @@ import { Button } from '../../components/Button';
 import { PostCard } from '../../components/PostCard';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAppSafeAreaInsets } from '../../components/AppSafeAreaView';
 import {
   hideCachedMissionaryProfileFields,
   PUBLIC_PRIVACY_QUERY_OPTIONS,
@@ -15,6 +16,7 @@ import {
 export default function MissionaryProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
+  const { bottom } = useAppSafeAreaInsets();
   const queryClient = useQueryClient();
 
   const { data: profile, isLoading, isFetching, refetch } = useGetMissionary(id!, {
@@ -58,7 +60,11 @@ export default function MissionaryProfileScreen() {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentInsetAdjustmentBehavior="never"
+      contentContainerStyle={{ paddingBottom: bottom + 24 }}
+    >
       <View style={styles.header}>
         <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
           <Text style={[styles.avatarText, { color: colors.secondaryForeground }]}>

@@ -1,6 +1,10 @@
 import React from 'react';
 import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  AppSafeAreaView,
+  useTabContentBottomPadding,
+  usesNativeTabs,
+} from '../../components/AppSafeAreaView';
 import {
   getListMissionariesQueryKey,
   useListMissionaries,
@@ -16,6 +20,8 @@ import {
 
 export default function ExploreScreen() {
   const colors = useColors();
+  const listBottomPadding = useTabContentBottomPadding();
+  const nativeTabs = usesNativeTabs();
   const {
     data: missionaries,
     isLoading,
@@ -38,7 +44,10 @@ export default function ExploreScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <AppSafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>Descobrir</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
@@ -58,11 +67,12 @@ export default function ExploreScreen() {
         <FlatList
           data={visibleMissionaries}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+          contentInsetAdjustmentBehavior={nativeTabs ? 'automatic' : 'never'}
+          contentContainerStyle={[styles.list, { paddingBottom: listBottomPadding }]}
           renderItem={({ item }) => <MissionaryCard missionary={item} />}
         />
       )}
-    </SafeAreaView>
+    </AppSafeAreaView>
   );
 }
 
@@ -72,5 +82,5 @@ const styles = StyleSheet.create({
   header: { padding: 24, paddingBottom: 16 },
   title: { fontSize: 32, fontFamily: 'Inter_700Bold', letterSpacing: -0.5, marginBottom: 4 },
   subtitle: { fontSize: 16, fontFamily: 'Inter_400Regular' },
-  list: { padding: 16, gap: 16, paddingBottom: 100 },
+  list: { padding: 16, gap: 16 },
 });

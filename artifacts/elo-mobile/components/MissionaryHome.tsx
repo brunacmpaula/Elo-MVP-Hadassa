@@ -4,7 +4,11 @@ import { useListPosts } from '@workspace/api-client-react';
 import { useColors } from '../hooks/useColors';
 import { useSync } from '../context/SyncContext';
 import { PostCard } from './PostCard';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  AppSafeAreaView,
+  useTabContentBottomPadding,
+  usesNativeTabs,
+} from './AppSafeAreaView';
 import { Button } from './Button';
 import { useOfflineMode } from '../context/OfflineContext';
 import { Feather } from '@expo/vector-icons';
@@ -12,6 +16,8 @@ import { ComposePostModal } from './ComposePostModal';
 
 export function MissionaryHome() {
   const colors = useColors();
+  const listBottomPadding = useTabContentBottomPadding();
+  const nativeTabs = usesNativeTabs();
   const { data: serverPosts, isLoading, refetch } = useListPosts({ mine: true });
   const { localPosts, isSyncing, syncNow, queue } = useSync();
   const { isOfflineMode, isConnectionKnown } = useOfflineMode();
@@ -32,7 +38,10 @@ export function MissionaryHome() {
   }, [serverPosts, localPosts]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <AppSafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={['top']}
+    >
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={[styles.title, { color: colors.foreground }]}>Meu Diário</Text>
@@ -75,7 +84,8 @@ export function MissionaryHome() {
       <FlatList
         data={allPosts}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentInsetAdjustmentBehavior={nativeTabs ? 'automatic' : 'never'}
+        contentContainerStyle={[styles.list, { paddingBottom: listBottomPadding }]}
         refreshing={isLoading || isSyncing}
         onRefresh={() => {
           syncNow();
@@ -94,7 +104,7 @@ export function MissionaryHome() {
         visible={isComposeOpen}
         onClose={() => setIsComposeOpen(false)}
       />
-    </SafeAreaView>
+    </AppSafeAreaView>
   );
 }
 
@@ -113,7 +123,7 @@ const styles = StyleSheet.create({
   },
   offlineLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   offlineText: { fontSize: 14, fontFamily: 'Inter_500Medium' },
-  list: { padding: 16, paddingBottom: 100 },
+  list: { padding: 16 },
   empty: { padding: 32, alignItems: 'center' },
   emptyText: { textAlign: 'center', fontSize: 16, fontFamily: 'Inter_400Regular' },
 });

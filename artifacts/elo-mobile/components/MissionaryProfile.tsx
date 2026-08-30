@@ -7,7 +7,11 @@ import {
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  AppSafeAreaView,
+  useTabContentBottomPadding,
+  usesNativeTabs,
+} from './AppSafeAreaView';
 import { useFocusEffect } from 'expo-router';
 import { useAuth, type ProfileField } from '../context/AuthContext';
 import { useOfflineMode } from '../context/OfflineContext';
@@ -99,6 +103,8 @@ export function MissionaryProfile() {
     setWomenOnlyNotifications,
     logout,
   } = useAuth();
+  const listBottomPadding = useTabContentBottomPadding(120);
+  const nativeTabs = usesNativeTabs();
 
   const handleNotificationAudienceChange = async (enabled: boolean) => {
     setPrivacySaveError(null);
@@ -127,13 +133,14 @@ export function MissionaryProfile() {
   if (!user) return null;
 
   return (
-    <SafeAreaView
+    <AppSafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentInsetAdjustmentBehavior={nativeTabs ? 'automatic' : 'never'}
+        contentContainerStyle={[styles.content, { paddingBottom: listBottomPadding }]}
       >
         <View style={styles.header}>
           <View>
@@ -297,7 +304,7 @@ export function MissionaryProfile() {
           accessibilityLabel="Sair da conta"
         />
       </ScrollView>
-    </SafeAreaView>
+    </AppSafeAreaView>
   );
 }
 
@@ -305,7 +312,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
     padding: 24,
-    paddingBottom: 120,
     gap: 18,
   },
   header: {
