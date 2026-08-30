@@ -29,6 +29,11 @@ const sources = {
   missionaryDetail: source('app/missionary/[id].tsx'),
   postDetail: source('app/post/[id].tsx'),
   compose: source('components/ComposePostModal.tsx'),
+  postCard: source('components/PostCard.tsx'),
+  nativeIosFlow: source('tests/native/image-picker.ios.yaml'),
+  nativeAndroidFlow: source('tests/native/image-picker.android.yaml'),
+  nativeRunner: source('tests/native/run-image-picker.mjs'),
+  nativeFixturePrep: source('tests/native/prepare-image-fixtures.mjs'),
 };
 
 const packageManifest = JSON.parse(sources.packageJson);
@@ -560,7 +565,7 @@ test('keeps compose message before update-only images and clears hidden media', 
   );
   assert.match(
     sources.compose,
-    /\{type === 'UPDATE' && \(\s*<View style=\{styles\.field\}>\s*<Text[\s\S]*?Imagens/,
+    /\{type === 'UPDATE' && \(\s*<View style=\{styles\.field\}(?: testID="post-images-section")?>\s*<Text[\s\S]*?Imagens/,
     'the image section must render only for UPDATE posts',
   );
   assert.match(
@@ -596,6 +601,39 @@ test('keeps native image selection capped at four with visible previews', () => 
     /disabled=\{media\.length >= MAX_IMAGES\}/,
     'the picker button must be disabled once four images are selected',
   );
+});
+
+test('keeps the native image-picker runner aligned with app selectors and payload checks', () => {
+  assert.match(sources.compose, /testID=\{`post-type-\$\{item\.value\.toLowerCase\(\)\}`\}/);
+  assert.match(sources.compose, /testID="title-publication"/);
+  assert.match(sources.compose, /testID="content-publication"/);
+  assert.match(sources.compose, /testID="post-images-section"/);
+  assert.match(
+    sources.compose,
+    /testID=\{`post-image-preview-\$\{index \+ 1\}`\}/,
+  );
+  assert.match(sources.postCard, /testID="post-media"/);
+
+  for (const [platform, flow] of [
+    ['iOS', sources.nativeIosFlow],
+    ['Android', sources.nativeAndroidFlow],
+  ]) {
+    assert.match(flow, /clearState: true/, `${platform}: flow must start clean`);
+    assert.match(flow, /id: post-image-preview-1/);
+    assert.match(flow, /id: post-image-preview-4/);
+    assert.match(flow, /id: post-image-preview-5/);
+    assert.match(flow, /id: post-type-prayer_request/);
+    assert.match(flow, /id: post-type-need/);
+    assert.match(flow, /Native image publication/);
+    assert.match(flow, /Native text publication/);
+    assert.match(flow, /id: post-media/);
+  }
+
+  assert.match(sources.nativeRunner, /prepare-image-fixtures\.mjs/);
+  assert.match(sources.nativeRunner, /maestro/);
+  assert.match(sources.nativeFixturePrep, /Array\.from\(\{ length: 5 \}/);
+  assert.match(sources.nativeFixturePrep, /simctl.*addmedia|addmedia.*simctl/);
+  assert.match(sources.nativeFixturePrep, /MEDIA_SCANNER_SCAN_FILE/);
 });
 
 for (const scenario of screenScenarios) {

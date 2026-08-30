@@ -125,7 +125,11 @@ export function PostCard({ post, isMissionary }: PostCardProps) {
       </Text>
 
       {post.media.length > 0 && (
-        <View style={styles.mediaRow}>
+        <View
+          style={styles.mediaRow}
+          testID="post-media"
+          accessibilityLabel={`${post.media.length === 1 ? '1 imagem' : `${post.media.length} imagens`} da publicação`}
+        >
           {post.media.slice(0, 3).map((item) => (
             <Image
               key={item.id}

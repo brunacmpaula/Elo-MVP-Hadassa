@@ -345,7 +345,12 @@ test("preferences persist and redact public profile data", async (t) => {
       body: JSON.stringify(mediaPostInput),
     });
     assert.equal(firstMediaPost.response.status, 201);
-    assert.equal(firstMediaPost.body.media.length, 1);
+    assert.deepEqual(firstMediaPost.body.media, [
+      {
+        ...mediaPayload,
+        id: "media-privacy-media-1",
+      },
+    ]);
     assert.equal(duplicateMediaPost.body.id, firstMediaPost.body.id);
     const invalidMediaPost = await jsonRequest("/posts", {
       method: "POST",

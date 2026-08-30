@@ -14,9 +14,12 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.elo.mobile"
     },
-    "android": {},
+    "android": {
+      "package": "com.elo.mobile"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -28,6 +31,7 @@
         }
       ],
       "expo-font",
+      "expo-image-picker",
       "expo-web-browser"
     ],
     "experiments": {

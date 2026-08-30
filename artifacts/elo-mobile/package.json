@@ -8,6 +8,7 @@
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
     "test": "node --no-warnings --test tests/*.test.mjs",
+    "test:native:image-picker": "node tests/native/run-image-picker.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "safeAreaPolicy": {

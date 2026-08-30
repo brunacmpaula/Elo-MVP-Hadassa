@@ -202,6 +202,7 @@ export function ComposePostModal({
                       onPress={() => handleTypeChange(item.value)}
                       accessibilityRole="button"
                       accessibilityState={{ selected }}
+                      testID={`post-type-${item.value.toLowerCase()}`}
                       style={({ pressed }) => [
                         styles.typeButton,
                         {
@@ -264,6 +265,7 @@ export function ComposePostModal({
                   onChangeText={setTitle}
                   maxLength={100}
                   accessibilityLabel="Título da publicação"
+                  testID="title-publication"
                 />
               </View>
 
@@ -288,11 +290,12 @@ export function ComposePostModal({
                   multiline
                   textAlignVertical="top"
                   accessibilityLabel="Conteúdo da publicação"
+                  testID="content-publication"
                 />
               </View>
 
               {type === 'UPDATE' && (
-                <View style={styles.field}>
+                <View style={styles.field} testID="post-images-section">
                   <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
                     Imagens
                   </Text>
@@ -302,8 +305,13 @@ export function ComposePostModal({
                   {media.length > 0 && (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                       <View style={styles.previewRow}>
-                        {media.map((item) => (
-                          <View key={item.clientMediaId} style={styles.preview}>
+                        {media.map((item, index) => (
+                          <View
+                            key={item.clientMediaId}
+                            testID={`post-image-preview-${index + 1}`}
+                            accessibilityLabel={`Prévia da imagem ${index + 1} de ${MAX_IMAGES}`}
+                            style={styles.preview}
+                          >
                             <Image source={{ uri: item.thumbnailUri }} style={styles.previewImage} />
                             <Pressable
                               onPress={() =>

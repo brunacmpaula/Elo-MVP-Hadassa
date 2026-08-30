@@ -1,0 +1,134 @@
+appId: ${ELO_APP_ID}
+name: Elo — seletor de imagens (iOS)
+tags:
+  - native
+  - image-picker
+
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: login-as-missionary
+- tapOn:
+    id: open-compose-post
+- tapOn:
+    id: post-type-update
+- tapOn:
+    id: choose-post-images
+- runFlow:
+    when:
+      visible: Allow Full Access
+    commands:
+      - tapOn: Allow Full Access
+- tapOn:
+    point: "16%, 30%"
+- tapOn: Add
+- assertVisible:
+    id: post-image-preview-1
+- assertNotVisible:
+    id: post-image-preview-2
+- tapOn:
+    id: close-compose-post
+
+# A seleção de quatro imagens deve preencher todos os slots.
+- tapOn:
+    id: open-compose-post
+- tapOn:
+    id: post-type-update
+- tapOn:
+    id: choose-post-images
+- tapOn:
+    point: "16%, 30%"
+- tapOn:
+    point: "50%, 30%"
+- tapOn:
+    point: "84%, 30%"
+- tapOn:
+    point: "16%, 48%"
+- tapOn: Add
+- assertVisible:
+    id: post-image-preview-1
+- assertVisible:
+    id: post-image-preview-2
+- assertVisible:
+    id: post-image-preview-3
+- assertVisible:
+    id: post-image-preview-4
+- assertNotVisible:
+    id: post-image-preview-5
+
+# A quinta tentativa no seletor do sistema não pode criar uma quinta prévia.
+- tapOn:
+    id: close-compose-post
+- tapOn:
+    id: open-compose-post
+- tapOn:
+    id: post-type-update
+- tapOn:
+    id: choose-post-images
+- tapOn:
+    point: "16%, 30%"
+- tapOn:
+    point: "50%, 30%"
+- tapOn:
+    point: "84%, 30%"
+- tapOn:
+    point: "16%, 48%"
+- tapOn:
+    point: "50%, 48%"
+- tapOn: Add
+- assertVisible:
+    id: post-image-preview-1
+- assertVisible:
+    id: post-image-preview-4
+- assertNotVisible:
+    id: post-image-preview-5
+
+# Trocar o tipo deve limpar a mídia e manter o contrato sem imagens.
+- tapOn:
+    id: post-type-prayer_request
+- assertNotVisible:
+    id: post-images-section
+- tapOn:
+    id: post-type-need
+- assertNotVisible:
+    id: post-images-section
+- tapOn:
+    id: post-type-update
+- assertVisible:
+    id: post-images-section
+- assertNotVisible:
+    id: post-image-preview-1
+
+# Publicação com imagem.
+- tapOn:
+    id: choose-post-images
+- tapOn:
+    point: "16%, 30%"
+- tapOn: Add
+- tapOn:
+    id: title-publication
+- inputText: "Native image publication"
+- tapOn:
+    id: content-publication
+- inputText: "Payload nativo com uma imagem."
+- tapOn:
+    id: save-post
+- assertVisible: Native image publication
+- assertVisible:
+    id: post-media
+
+# Publicação sem imagem.
+- tapOn:
+    id: open-compose-post
+- tapOn:
+    id: post-type-prayer_request
+- tapOn:
+    id: title-publication
+- inputText: "Native text publication"
+- tapOn:
+    id: content-publication
+- inputText: "Payload nativo sem imagem."
+- tapOn:
+    id: save-post
+- assertVisible: Native text publication
