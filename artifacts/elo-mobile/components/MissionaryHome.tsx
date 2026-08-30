@@ -46,7 +46,7 @@ export function MissionaryHome() {
     >
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Meu Diário</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>Feed</Text>
           <Button
             title="Novo"
             icon="plus"

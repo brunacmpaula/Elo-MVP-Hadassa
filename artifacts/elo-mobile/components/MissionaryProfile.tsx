@@ -197,6 +197,52 @@ export function MissionaryProfile() {
           </Text>
         </View>
 
+        {user.gender === 'FEMALE' && (
+          <>
+            <View style={styles.sectionHeading}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+                Segurança e cuidado
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.notificationCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <View style={[styles.notificationIcon, { backgroundColor: colors.accent + '16' }]}>
+                <Feather name="heart" size={20} color={colors.accent} />
+              </View>
+              <View style={styles.notificationCopy}>
+                <Text style={[styles.notificationTitle, { color: colors.foreground }]}>
+                  Notificações entre mulheres
+                </Text>
+                <Text style={[styles.notificationDescription, { color: colors.mutedForeground }]}>
+                  Ative para definir que as notificações desta missão sejam
+                  direcionadas somente a outras mulheres.
+                </Text>
+              </View>
+              <Switch
+                value={profilePreferences.womenOnlyNotifications}
+                onValueChange={handleNotificationAudienceChange}
+                disabled={isSavingNotificationAudience}
+                trackColor={{ false: colors.border, true: colors.accent + '65' }}
+                thumbColor={
+                  profilePreferences.womenOnlyNotifications
+                    ? colors.accent
+                    : colors.mutedForeground
+                }
+                accessibilityRole="switch"
+                accessibilityLabel="Restringir notificações a outras mulheres"
+                accessibilityState={{
+                  checked: profilePreferences.womenOnlyNotifications,
+                }}
+                testID="women-only-notifications"
+              />
+            </View>
+          </>
+        )}
+
         <View style={styles.sectionHeading}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
             Seus dados
@@ -263,52 +309,6 @@ export function MissionaryProfile() {
             onSaveError={setPrivacySaveError}
           />
         </View>
-
-        {user.gender === 'FEMALE' && (
-          <>
-            <View style={styles.sectionHeading}>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                Segurança e cuidado
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.notificationCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-            >
-              <View style={[styles.notificationIcon, { backgroundColor: colors.accent + '16' }]}>
-                <Feather name="heart" size={20} color={colors.accent} />
-              </View>
-              <View style={styles.notificationCopy}>
-                <Text style={[styles.notificationTitle, { color: colors.foreground }]}>
-                  Notificações entre mulheres
-                </Text>
-                <Text style={[styles.notificationDescription, { color: colors.mutedForeground }]}>
-                  Ative para definir que as notificações desta missão sejam
-                  direcionadas somente a outras mulheres.
-                </Text>
-              </View>
-              <Switch
-                value={profilePreferences.womenOnlyNotifications}
-                onValueChange={handleNotificationAudienceChange}
-                disabled={isSavingNotificationAudience}
-                trackColor={{ false: colors.border, true: colors.accent + '65' }}
-                thumbColor={
-                  profilePreferences.womenOnlyNotifications
-                    ? colors.accent
-                    : colors.mutedForeground
-                }
-                accessibilityRole="switch"
-                accessibilityLabel="Restringir notificações a outras mulheres"
-                accessibilityState={{
-                  checked: profilePreferences.womenOnlyNotifications,
-                }}
-                testID="women-only-notifications"
-              />
-            </View>
-          </>
-        )}
 
       </ScrollView>
       <View

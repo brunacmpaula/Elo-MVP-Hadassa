@@ -37,7 +37,7 @@ export default function SyncQueueScreen() {
       edges={['top']}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Fila de Sincronização</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Sincronização</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           {queueSummary.publicationCount} publicações · {queueSummary.imageCount} imagens ·{' '}
           {formatPendingBytes(queueSummary.totalBytes)}
