@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Elo — Mesmo longe, juntos na missão",
-    "slug": "elo-mobile",
+    "name": "Elo414 — Mesmo longe, juntos na missão",
+    "slug": "elo414mesmolongejuntosnamisso",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "elo-mobile",
+    "scheme": "elo414mesmolongejuntosnamisso",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -15,13 +15,13 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.elo.mobile"
+      "bundleIdentifier": "com.elo414mesmolongejuntosnamisso.app"
     },
     "android": {
-      "package": "com.elo.mobile"
+      "package": "com.elo414mesmolongejuntosnamisso.app"
     },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       [
