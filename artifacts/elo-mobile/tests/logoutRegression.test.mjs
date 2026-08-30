@@ -81,13 +81,11 @@ test('logout gates the tab tree and keeps the login route stable after remount',
   assert.match(authContext, /setIsLoggingOut\(true\)/);
   assert.match(authContext, /await clearPersistedSession\(AsyncStorage\)/);
   assert.match(authContext, /setUser\(null\)/);
-  assert.ok(authContext.includes("router.replace('/')"));
-  assert.ok(
-    authContext.indexOf('setUser(null)') < authContext.indexOf("router.replace('/')"),
-    'the login route must be selected after in-memory auth is cleared',
-  );
+  assert.doesNotMatch(authContext, /router\.replace/);
   assert.match(authContext, /AsyncStorage\.getItem\(TOKEN_STORAGE_KEY\)/);
   assert.match(rootLayout, /if \(isLoggingOut && !user\) return <LogoutTransition \/>/);
+  assert.match(rootLayout, /<Stack\.Protected guard=\{!user\}>[\s\S]*<Stack\.Screen name="index" \/>/);
+  assert.match(rootLayout, /<Stack\.Protected guard=\{!!user\}>[\s\S]*<Stack\.Screen name="\(tabs\)" \/>/);
   assert.match(login, /if \(isLoading \|\| isLoggingOut\)/);
   assert.match(profileRoute, /if \(isLoading\)/);
   assert.match(missionaryProfile, /loading=\{isLoggingOut\}/);

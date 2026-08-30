@@ -16,7 +16,6 @@ import {
   type UserRole,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
 import { clearPersistedSession } from '../lib/authSession';
 
 export type ProfileField = 'email' | 'location' | 'bio';
@@ -56,7 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profilePreferences, setProfilePreferences] =
     useState<ProfilePreferences>(DEFAULT_PROFILE_PREFERENCES);
   const queryClient = useQueryClient();
-  const router = useRouter();
   const logoutPromiseRef = useRef<Promise<void> | null>(null);
 
   const cacheProfilePreferences = async (preferences: ProfilePreferences) => {
@@ -123,7 +121,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ]);
     setUser(session.user);
     await loadRemoteProfilePreferences(session.user);
-    router.replace('/(tabs)');
   };
 
   const logout = () => {
@@ -138,7 +135,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         queryClient.clear();
         setUser(null);
         setProfilePreferences(DEFAULT_PROFILE_PREFERENCES);
-        router.replace('/');
         // Let the root navigator render its logout transition before the
         // authenticated tree is mounted again at the login route.
         await new Promise<void>((resolve) => setTimeout(resolve, 0));

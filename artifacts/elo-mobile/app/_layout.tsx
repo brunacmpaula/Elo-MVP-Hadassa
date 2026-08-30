@@ -58,10 +58,14 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false, headerBackTitle: 'Voltar' }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="missionary/[id]" options={{ headerShown: true, title: 'Perfil' }} />
-      <Stack.Screen name="post/[id]" options={{ headerShown: true, title: 'Detalhes' }} />
+      <Stack.Protected guard={!user}>
+        <Stack.Screen name="index" />
+      </Stack.Protected>
+      <Stack.Protected guard={!!user}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="missionary/[id]" options={{ headerShown: true, title: 'Perfil' }} />
+        <Stack.Screen name="post/[id]" options={{ headerShown: true, title: 'Detalhes' }} />
+      </Stack.Protected>
     </Stack>
   );
 }
