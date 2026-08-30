@@ -1,11 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Post } from '@workspace/api-client-react';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
+import {
+  Post,
+  useFollowMissionary,
+  useUnfollowMissionary,
+} from '@workspace/api-client-react';
 import { useColors } from '../hooks/useColors';
 import { Feather } from '@expo/vector-icons';
 import { formatTimeAgo, translatePostType } from '../lib/utils';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface PostCardProps {
   post: Post;
@@ -15,6 +20,23 @@ interface PostCardProps {
 export function PostCard({ post, isMissionary }: PostCardProps) {
   const colors = useColors();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const follow = useFollowMissionary();
+  const unfollow = useUnfollowMissionary();
+  const toggleSaved = () => {
+    const mutation = post.missionarySaved ? unfollow : follow;
+    mutation.mutate(
+      { missionaryId: post.missionaryId },
+      {
+        onSettled: () =>
+          queryClient.invalidateQueries({
+            predicate: (query) =>
+              String(query.queryKey[0]).startsWith('/api/missionaries') ||
+              String(query.queryKey[0]).startsWith('/api/posts'),
+          }),
+      },
+    );
+  };
 
   const handlePress = () => {
     router.push(`/post/${post.id}`);
@@ -69,6 +91,24 @@ export function PostCard({ post, isMissionary }: PostCardProps) {
             </Text>
           </View>
         )}
+        {!isMissionary && (
+          <Pressable
+            onPress={(event) => {
+              event.stopPropagation();
+              toggleSaved();
+            }}
+            accessibilityLabel={
+              post.missionarySaved ? 'Remover missionário dos salvos' : 'Salvar missionário'
+            }
+            hitSlop={10}
+          >
+            <Feather
+              name="bookmark"
+              size={21}
+              color={post.missionarySaved ? colors.accent : colors.mutedForeground}
+            />
+          </Pressable>
+        )}
       </View>
 
       <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={2}>
@@ -78,6 +118,19 @@ export function PostCard({ post, isMissionary }: PostCardProps) {
       <Text style={[styles.content, { color: colors.mutedForeground }]} numberOfLines={3}>
         {post.content}
       </Text>
+
+      {post.media.length > 0 && (
+        <View style={styles.mediaRow}>
+          {post.media.slice(0, 3).map((item) => (
+            <Image
+              key={item.id}
+              source={{ uri: item.thumbnailUri }}
+              style={styles.mediaImage}
+              accessibilityLabel="Imagem da publicação"
+            />
+          ))}
+        </View>
+      )}
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <View style={styles.action}>
@@ -165,6 +218,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
+  },
+  mediaRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  mediaImage: {
+    flex: 1,
+    height: 110,
+    borderRadius: 12,
   },
   action: {
     flexDirection: 'row',

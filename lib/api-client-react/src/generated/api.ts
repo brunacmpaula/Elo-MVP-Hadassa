@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  Comment,
+  CommentInput,
   FollowState,
   HealthStatus,
   ListPostsParams,
@@ -959,6 +961,155 @@ export const useUpdatePost = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdatePostMutationOptions(options));
+    }
+
+export const getListPostCommentsUrl = (postId: string,) => {
+
+
+
+
+  return `/api/posts/${postId}/comments`
+}
+
+/**
+ * @summary List comments on a post
+ */
+export const listPostComments = async (postId: string, options?: Parameters<typeof customFetch>[1]): Promise<Comment[]> => {
+
+  return customFetch<Comment[]>(getListPostCommentsUrl(postId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPostCommentsQueryKey = (postId: string,) => {
+    return [
+    `/api/posts/${postId}/comments`
+    ] as const;
+    }
+
+
+export const getListPostCommentsQueryOptions = <TData = Awaited<ReturnType<typeof listPostComments>>, TError = ErrorType<void>>(postId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPostComments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPostCommentsQueryKey(postId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPostComments>>> = ({ signal }) => listPostComments(postId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: postId !== null && postId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPostComments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPostCommentsQueryResult = NonNullable<Awaited<ReturnType<typeof listPostComments>>>
+export type ListPostCommentsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List comments on a post
+ */
+
+export function useListPostComments<TData = Awaited<ReturnType<typeof listPostComments>>, TError = ErrorType<void>>(
+ postId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPostComments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPostCommentsQueryOptions(postId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePostCommentUrl = (postId: string,) => {
+
+
+
+
+  return `/api/posts/${postId}/comments`
+}
+
+/**
+ * @summary Add a supporter comment to a post
+ */
+export const createPostComment = async (postId: string,
+    commentInput: CommentInput, options?: Parameters<typeof customFetch>[1]): Promise<Comment> => {
+
+  return customFetch<Comment>(getCreatePostCommentUrl(postId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(commentInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePostCommentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPostComment>>, TError,{postId: string;data: BodyType<CommentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPostComment>>, TError,{postId: string;data: BodyType<CommentInput>}, TContext> => {
+
+const mutationKey = ['createPostComment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPostComment>>, {postId: string;data: BodyType<CommentInput>}> = (props) => {
+          const {postId,data} = props ?? {};
+
+          return  createPostComment(postId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePostCommentMutationResult = NonNullable<Awaited<ReturnType<typeof createPostComment>>>
+    export type CreatePostCommentMutationBody = BodyType<CommentInput>
+    export type CreatePostCommentMutationError = ErrorType<void>
+
+    /**
+ * @summary Add a supporter comment to a post
+ */
+export const useCreatePostComment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPostComment>>, TError,{postId: string;data: BodyType<CommentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPostComment>>,
+        TError,
+        {postId: string;data: BodyType<CommentInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePostCommentMutationOptions(options));
     }
 
 export const getPrayForPostUrl = (postId: string,) => {

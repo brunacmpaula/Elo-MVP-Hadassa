@@ -5,6 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { Comment } from './comment';
+import type { PostMedia } from './postMedia';
 import type { PostStatus } from './postStatus';
 import type { PostType } from './postType';
 
@@ -23,4 +25,8 @@ export interface Post {
   /** @minimum 0 */
   prayerCount: number;
   prayedByMe: boolean;
+  /** Whether the authenticated supporter saved this missionary. */
+  missionarySaved: boolean;
+  media: PostMedia[];
+  comments: Comment[];
 }

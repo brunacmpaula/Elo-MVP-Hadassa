@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './comment';
+export * from './commentInput';
 export * from './followState';
 export * from './healthStatus';
 export * from './listPostsParams';
@@ -16,6 +18,9 @@ export * from './missionaryProfile';
 export * from './post';
 export * from './postInput';
 export * from './postInputType';
+export * from './postMedia';
+export * from './postMediaInput';
+export * from './postMediaInputMimeType';
 export * from './postStatus';
 export * from './postType';
 export * from './postUpdate';

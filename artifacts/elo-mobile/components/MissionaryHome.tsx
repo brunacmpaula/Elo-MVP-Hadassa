@@ -13,13 +13,14 @@ import { Button } from './Button';
 import { useOfflineMode } from '../context/OfflineContext';
 import { Feather } from '@expo/vector-icons';
 import { ComposePostModal } from './ComposePostModal';
+import { formatPendingBytes } from '../context/syncState';
 
 export function MissionaryHome() {
   const colors = useColors();
   const listBottomPadding = useTabContentBottomPadding();
   const nativeTabs = usesNativeTabs();
   const { data: serverPosts, isLoading, refetch } = useListPosts({ mine: true });
-  const { localPosts, isSyncing, syncNow, queue } = useSync();
+  const { localPosts, isSyncing, syncNow, queue, queueSummary, syncStatus } = useSync();
   const { isOfflineMode, isConnectionKnown } = useOfflineMode();
   const [isComposeOpen, setIsComposeOpen] = useState(false);
 
@@ -69,13 +70,19 @@ export function MissionaryHome() {
               color={isOfflineMode ? colors.accent : colors.success}
             />
             <Text style={[styles.offlineText, { color: colors.foreground }]}>
-              {!isConnectionKnown
+              {syncStatus === 'CHECKING_CONNECTION'
                 ? 'Verificando conexão'
-                : isOfflineMode
-                  ? `Você está offline${queue.length ? ` · ${queue.length} aguardando` : ''}`
-                  : isSyncing
-                    ? 'Sincronizando publicações'
-                    : 'Conectado e sincronizado'}
+                : syncStatus === 'OFFLINE'
+                  ? 'Fila pausada: sem conexão'
+                  : syncStatus === 'WIFI_REQUIRED'
+                    ? 'Fila pausada: aguardando Wi‑Fi'
+                    : syncStatus === 'SYNCING'
+                      ? 'Sincronizando publicações e imagens'
+                      : syncStatus === 'FAILED'
+                        ? 'Falha no envio. Abra a fila para tentar novamente'
+                        : queue.length
+                          ? `${queueSummary.publicationCount} publicações · ${queueSummary.imageCount} imagens · ${formatPendingBytes(queueSummary.totalBytes)}`
+                          : 'Conectado e sincronizado'}
             </Text>
           </View>
         </View>

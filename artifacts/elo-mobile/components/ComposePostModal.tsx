@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Image,
   Modal,
   Platform,
   Pressable,
@@ -12,6 +13,8 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { PostInputType } from '@workspace/api-client-react';
+import type { PostMediaInput } from '@workspace/api-client-react';
+import * as ImagePicker from 'expo-image-picker';
 import { useAppSafeAreaInsets } from './AppSafeAreaView';
 import { useColors } from '../hooks/useColors';
 import { useSync } from '../context/SyncContext';
@@ -31,6 +34,13 @@ const postTypes: Array<{
   { value: 'PRAYER_REQUEST', label: 'Oração', icon: 'heart' },
   { value: 'NEED', label: 'Necessidade', icon: 'package' },
 ];
+const MAX_IMAGE_BYTES = 1_500_000;
+const MAX_IMAGES = 4;
+
+function decodedBase64Bytes(value: string) {
+  return Math.floor((value.length * 3) / 4) -
+    (value.endsWith('==') ? 2 : value.endsWith('=') ? 1 : 0);
+}
 
 export function ComposePostModal({
   visible,
@@ -43,19 +53,67 @@ export function ComposePostModal({
   const [content, setContent] = useState('');
   const [type, setType] = useState<PostInputType>('PRAYER_REQUEST');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [media, setMedia] = useState<PostMediaInput[]>([]);
+  const [mediaError, setMediaError] = useState<string | null>(null);
 
   const resetAndClose = () => {
     setTitle('');
     setContent('');
     setType('PRAYER_REQUEST');
+    setMedia([]);
+    setMediaError(null);
     onClose();
+  };
+
+  const chooseImages = async () => {
+    setMediaError(null);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_IMAGES - media.length,
+      quality: 0.65,
+      base64: true,
+    });
+    if (result.canceled) return;
+    const prepared: PostMediaInput[] = [];
+    for (const asset of result.assets) {
+      if (!asset.base64) {
+        setMediaError('Não foi possível preparar esta imagem. Escolha outra foto.');
+        continue;
+      }
+      const mimeType =
+        asset.mimeType === 'image/png' || asset.mimeType === 'image/webp'
+          ? asset.mimeType
+          : 'image/jpeg';
+      const sizeBytes = decodedBase64Bytes(asset.base64);
+      if (sizeBytes > MAX_IMAGE_BYTES) {
+        setMediaError(
+          'Uma imagem continuou maior que 1,5 MB após a compressão. Recorte-a ou escolha uma foto menor.',
+        );
+        continue;
+      }
+      const dataUri = `data:${mimeType};base64,${asset.base64}`;
+      const clientMediaId = `image_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 9)}`;
+      prepared.push({
+        clientMediaId,
+        uri: dataUri,
+        thumbnailUri: dataUri,
+        mimeType,
+        sizeBytes,
+        width: asset.width,
+        height: asset.height,
+      });
+    }
+    setMedia((current) => [...current, ...prepared].slice(0, MAX_IMAGES));
   };
 
   const handleSubmit = async () => {
     if (!title.trim() || !content.trim()) return;
     setIsSubmitting(true);
     try {
-      await enqueueCreatePost(title.trim(), content.trim(), type);
+      await enqueueCreatePost(title.trim(), content.trim(), type, media);
       resetAndClose();
     } finally {
       setIsSubmitting(false);
@@ -192,6 +250,61 @@ export function ComposePostModal({
 
               <View style={styles.field}>
                 <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
+                  Imagens
+                </Text>
+                <Text style={[styles.mediaHint, { color: colors.mutedForeground }]}>
+                  Até 4 imagens. Cada arquivo é comprimido e deve ter no máximo 1,5 MB.
+                </Text>
+                {media.length > 0 && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={styles.previewRow}>
+                      {media.map((item) => (
+                        <View key={item.clientMediaId} style={styles.preview}>
+                          <Image source={{ uri: item.thumbnailUri }} style={styles.previewImage} />
+                          <Pressable
+                            onPress={() =>
+                              setMedia((current) =>
+                                current.filter(
+                                  (image) =>
+                                    image.clientMediaId !== item.clientMediaId,
+                                ),
+                              )
+                            }
+                            style={[
+                              styles.removeImage,
+                              { backgroundColor: colors.card },
+                            ]}
+                            accessibilityLabel="Remover imagem"
+                            testID={`remove-image-${item.clientMediaId}`}
+                          >
+                            <Feather name="x" size={16} color={colors.destructive} />
+                          </Pressable>
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
+                )}
+                {mediaError && (
+                  <Text
+                    style={[styles.mediaError, { color: colors.destructive }]}
+                    accessibilityRole="alert"
+                  >
+                    {mediaError}
+                  </Text>
+                )}
+                <Button
+                  title={media.length ? 'Adicionar outra imagem' : 'Escolher imagens'}
+                  icon="image"
+                  variant="outline"
+                  fullWidth
+                  onPress={chooseImages}
+                  disabled={media.length >= MAX_IMAGES}
+                  testID="choose-post-images"
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
                   Mensagem
                 </Text>
                 <TextInput
@@ -315,5 +428,38 @@ const styles = StyleSheet.create({
   contentInput: {
     minHeight: 132,
     lineHeight: 23,
+  },
+  mediaHint: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 19,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  preview: {
+    width: 94,
+    height: 94,
+  },
+  previewImage: {
+    width: 94,
+    height: 94,
+    borderRadius: 12,
+  },
+  removeImage: {
+    position: 'absolute',
+    right: 5,
+    top: 5,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaError: {
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    lineHeight: 19,
   },
 });

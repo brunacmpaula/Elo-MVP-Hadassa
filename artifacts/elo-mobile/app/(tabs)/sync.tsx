@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Switch } from 'react-native';
 import {
   AppSafeAreaView,
   useTabContentBottomPadding,
@@ -10,9 +10,18 @@ import { useColors } from '../../hooks/useColors';
 import { Feather } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
 import { formatTimeAgo, translatePostType } from '../../lib/utils';
+import { formatPendingBytes } from '../../context/syncState';
 
 export default function SyncQueueScreen() {
-  const { queue, syncNow, isSyncing } = useSync();
+  const {
+    queue,
+    syncNow,
+    isSyncing,
+    queueSummary,
+    syncStatus,
+    syncOnlyOnWifi,
+    setSyncOnlyOnWifi,
+  } = useSync();
   const colors = useColors();
   const listBottomPadding = useTabContentBottomPadding();
   const nativeTabs = usesNativeTabs();
@@ -28,8 +37,35 @@ export default function SyncQueueScreen() {
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.foreground }]}>Fila de Sincronização</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Operações aguardando conexão.
+          {queueSummary.publicationCount} publicações · {queueSummary.imageCount} imagens ·{' '}
+          {formatPendingBytes(queueSummary.totalBytes)}
         </Text>
+        <Text style={[styles.statusLine, { color: colors.mutedForeground }]}>
+          {syncStatus === 'OFFLINE'
+            ? 'Pausada: sem conexão.'
+            : syncStatus === 'WIFI_REQUIRED'
+              ? 'Pausada: aguardando Wi‑Fi.'
+              : syncStatus === 'SYNCING'
+                ? 'Enviando conteúdo…'
+                : syncStatus === 'FAILED'
+                  ? 'Há envios com falha.'
+                  : syncStatus === 'CHECKING_CONNECTION'
+                    ? 'Verificando a conexão…'
+                    : queue.length
+                      ? 'Pronta para sincronizar.'
+                      : 'Tudo sincronizado.'}
+        </Text>
+        <View style={[styles.preference, { borderColor: colors.border }]}>
+          <View style={styles.preferenceCopy}>
+            <Text style={[styles.preferenceTitle, { color: colors.foreground }]}>
+              Sincronizar apenas no Wi‑Fi
+            </Text>
+            <Text style={[styles.preferenceHint, { color: colors.mutedForeground }]}>
+              Evita o envio de imagens pela rede móvel.
+            </Text>
+          </View>
+          <Switch value={syncOnlyOnWifi} onValueChange={setSyncOnlyOnWifi} />
+        </View>
       </View>
 
       <View style={styles.listContainer}>
@@ -124,6 +160,11 @@ const styles = StyleSheet.create({
   header: { padding: 24, paddingBottom: 16 },
   title: { fontSize: 32, fontFamily: 'Inter_700Bold', letterSpacing: -0.5, marginBottom: 4 },
   subtitle: { fontSize: 16, fontFamily: 'Inter_400Regular' },
+  statusLine: { fontSize: 14, fontFamily: 'Inter_500Medium', marginTop: 6 },
+  preference: { marginTop: 16, borderWidth: 1, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  preferenceCopy: { flex: 1, gap: 3 },
+  preferenceTitle: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  preferenceHint: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_400Regular' },
   listContainer: { flex: 1 },
   list: { padding: 16, gap: 12 },
   item: {

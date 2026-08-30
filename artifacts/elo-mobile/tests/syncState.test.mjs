@@ -49,6 +49,8 @@ import {
   getPendingOperations,
   markOperationFailed,
   markOperationSucceeded,
+  getQueueSummary,
+  getSyncBlockReason,
 } from '../context/syncState.ts';
 
 const operationId = 'local-offline-post-1';
@@ -80,6 +82,7 @@ function makeOperation(overrides = {}) {
       content: 'Uma publicação criada sem conexão.',
       type: 'UPDATE',
       clientOperationId: operationId,
+      media: [],
     },
     status: 'PENDING',
     retryCount: 0,
@@ -139,14 +142,61 @@ test('acknowledges the same identifier without duplicate queue entries or posts'
       localPosts: [makePost(), makePost()],
     },
     operationId,
-    published,
   );
 
   assert.equal(acknowledged.queue.length, 0);
+  assert.equal(acknowledged.localPosts.length, 0);
+});
+
+test('counts pending publications, images and total upload volume', () => {
+  const media = [
+    {
+      clientMediaId: 'image-1',
+      uri: 'data:image/jpeg;base64,YQ==',
+      thumbnailUri: 'data:image/jpeg;base64,YQ==',
+      mimeType: 'image/jpeg',
+      sizeBytes: 1024,
+      width: 10,
+      height: 10,
+    },
+  ];
+  const summary = getQueueSummary([
+    makeOperation({ payload: { ...makeOperation().payload, media } }),
+  ]);
+  assert.deepEqual(summary, {
+    publicationCount: 1,
+    imageCount: 1,
+    totalBytes: 1024,
+    failedCount: 0,
+  });
+});
+
+test('blocks uploads offline and on mobile data when Wi-Fi is required', () => {
   assert.equal(
-    acknowledged.localPosts.filter((post) => post.id === published.id).length,
-    1,
+    getSyncBlockReason({
+      isConnectionKnown: true,
+      isOffline: true,
+      syncOnlyOnWifi: false,
+      isWifi: false,
+    }),
+    'OFFLINE',
   );
-  assert.equal(acknowledged.localPosts.length, 1);
-  assert.equal(acknowledged.localPosts[0]?.status, 'PUBLISHED');
+  assert.equal(
+    getSyncBlockReason({
+      isConnectionKnown: true,
+      isOffline: false,
+      syncOnlyOnWifi: true,
+      isWifi: false,
+    }),
+    'WIFI_REQUIRED',
+  );
+  assert.equal(
+    getSyncBlockReason({
+      isConnectionKnown: true,
+      isOffline: false,
+      syncOnlyOnWifi: true,
+      isWifi: true,
+    }),
+    null,
+  );
 });

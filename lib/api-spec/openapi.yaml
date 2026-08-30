@@ -16,6 +16,8 @@ tags:
     description: Missionary discovery and follows
   - name: posts
     description: Missionary content
+  - name: comments
+    description: Supporter comments on missionary content
   - name: prayers
     description: Prayer commitments
   - name: sync
@@ -136,6 +138,8 @@ paths:
       operationId: followMissionary
       tags: [missionaries]
       summary: Follow a missionary
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/MissionaryId"
       responses:
@@ -149,6 +153,8 @@ paths:
       operationId: unfollowMissionary
       tags: [missionaries]
       summary: Stop following a missionary
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/MissionaryId"
       responses:
@@ -247,6 +253,51 @@ paths:
           description: Authentication required
         "403":
           description: Only the post owner can edit it
+  /posts/{postId}/comments:
+    get:
+      operationId: listPostComments
+      tags: [comments]
+      summary: List comments on a post
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+        "404":
+          description: Not found
+    post:
+      operationId: createPostComment
+      tags: [comments]
+      summary: Add a supporter comment to a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        "401":
+          description: Authentication required
+        "403":
+          description: Supporter role required
+        "404":
+          description: Not found
   /posts/{postId}/prayers:
     post:
       operationId: prayForPost
@@ -402,7 +453,7 @@ components:
           type: boolean
     Post:
       type: object
-      required: [id, missionaryId, missionaryName, type, title, content, status, createdAt, updatedAt, prayerCount, prayedByMe]
+      required: [id, missionaryId, missionaryName, type, title, content, status, createdAt, updatedAt, prayerCount, prayedByMe, missionarySaved, media, comments]
       properties:
         id: { type: string }
         missionaryId: { type: string }
@@ -422,6 +473,17 @@ components:
         updatedAt: { type: string, format: date-time }
         prayerCount: { type: number, minimum: 0 }
         prayedByMe: { type: boolean }
+        missionarySaved:
+          type: boolean
+          description: Whether the authenticated supporter saved this missionary.
+        media:
+          type: array
+          items:
+            $ref: "#/components/schemas/PostMedia"
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
     PostInput:
       type: object
       required: [missionaryId, type, title, content, clientOperationId]
@@ -433,6 +495,11 @@ components:
         title: { type: string, minLength: 1 }
         content: { type: string, minLength: 1 }
         clientOperationId: { type: string, minLength: 1 }
+        media:
+          type: array
+          maxItems: 4
+          items:
+            $ref: "#/components/schemas/PostMediaInput"
     PostUpdate:
       type: object
       properties:
@@ -451,6 +518,49 @@ components:
         postId: { type: string }
         prayedByMe: { type: boolean }
         prayerCount: { type: number, minimum: 0 }
+    PostMediaInput:
+      type: object
+      required: [clientMediaId, uri, thumbnailUri, mimeType, sizeBytes, width, height]
+      properties:
+        clientMediaId: { type: string, minLength: 1 }
+        uri:
+          type: string
+          description: Compressed image data URL kept locally until synchronization.
+        thumbnailUri:
+          type: string
+          description: Thumbnail data URL used for fast list rendering.
+        mimeType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+        sizeBytes:
+          type: number
+          minimum: 1
+          maximum: 1500000
+          description: Whole number of bytes.
+        width: { type: number, minimum: 1 }
+        height: { type: number, minimum: 1 }
+    PostMedia:
+      allOf:
+        - $ref: "#/components/schemas/PostMediaInput"
+        - type: object
+          required: [id]
+          properties:
+            id: { type: string }
+    CommentInput:
+      type: object
+      required: [content, clientOperationId]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 500 }
+        clientOperationId: { type: string, minLength: 1 }
+    Comment:
+      type: object
+      required: [id, postId, authorName, content, createdAt]
+      properties:
+        id: { type: string }
+        postId: { type: string }
+        authorName: { type: string }
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
     SyncOperation:
       type: object
       required: [operationId, entityType, entityId, operationType, payload]

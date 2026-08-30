@@ -1,13 +1,35 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { Missionary } from '@workspace/api-client-react';
+import {
+  Missionary,
+  useFollowMissionary,
+  useUnfollowMissionary,
+} from '@workspace/api-client-react';
 import { useColors } from '../hooks/useColors';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function MissionaryCard({ missionary }: { missionary: Missionary }) {
   const colors = useColors();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const follow = useFollowMissionary();
+  const unfollow = useUnfollowMissionary();
+  const toggleSaved = () => {
+    const action = missionary.isFollowed ? unfollow : follow;
+    action.mutate(
+      { missionaryId: missionary.id },
+      {
+        onSuccess: () =>
+          queryClient.invalidateQueries({
+            predicate: (query) =>
+              String(query.queryKey[0]).startsWith('/api/missionaries') ||
+              String(query.queryKey[0]).startsWith('/api/posts'),
+          }),
+      },
+    );
+  };
 
   return (
     <Pressable
@@ -39,7 +61,22 @@ export function MissionaryCard({ missionary }: { missionary: Missionary }) {
           )}
         </View>
       </View>
-      <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+      <Pressable
+        onPress={(event) => {
+          event.stopPropagation();
+          toggleSaved();
+        }}
+        accessibilityLabel={
+          missionary.isFollowed ? 'Remover missionário dos salvos' : 'Salvar missionário'
+        }
+        hitSlop={10}
+      >
+        <Feather
+          name={missionary.isFollowed ? 'bookmark' : 'bookmark'}
+          size={22}
+          color={missionary.isFollowed ? colors.accent : colors.mutedForeground}
+        />
+      </Pressable>
     </Pressable>
   );
 }

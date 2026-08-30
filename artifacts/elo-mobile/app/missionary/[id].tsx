@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useGetMissionary, useFollowMissionary, useUnfollowMissionary, getGetMissionaryQueryKey } from '@workspace/api-client-react';
 import { useColors } from '../../hooks/useColors';
@@ -12,12 +12,14 @@ import {
   hideCachedMissionaryProfileFields,
   PUBLIC_PRIVACY_QUERY_OPTIONS,
 } from '../../lib/privacy';
+import { useAuth } from '../../context/AuthContext';
 
 export default function MissionaryProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const { bottom } = useAppSafeAreaInsets();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: profile, isLoading, isFetching, refetch } = useGetMissionary(id!, {
     query: {
@@ -44,11 +46,18 @@ export default function MissionaryProfileScreen() {
       old ? { ...old, isFollowed: !old.isFollowed } : old
     );
 
-    if (profile.isFollowed) {
-      unfollowMutation.mutate({ missionaryId: profile.id });
-    } else {
-      followMutation.mutate({ missionaryId: profile.id });
-    }
+    const mutation = profile.isFollowed ? unfollowMutation : followMutation;
+    mutation.mutate(
+      { missionaryId: profile.id },
+      {
+        onSettled: () =>
+          queryClient.invalidateQueries({
+            predicate: (query) =>
+              String(query.queryKey[0]).startsWith('/api/missionaries') ||
+              String(query.queryKey[0]).startsWith('/api/posts'),
+          }),
+      },
+    );
   };
 
   if (isLoading || !visibleProfile) {
@@ -80,12 +89,28 @@ export default function MissionaryProfileScreen() {
         )}
         
         <View style={styles.actions}>
-          <Button
-            title={visibleProfile.isFollowed ? 'Apoiando' : 'Apoiar em Oração'}
-            icon={visibleProfile.isFollowed ? 'check' : 'heart'}
-            variant={visibleProfile.isFollowed ? 'secondary' : 'primary'}
-            onPress={handleFollow}
-          />
+          {user?.role === 'SUPPORTER' && (
+            <>
+              <Button
+                title={visibleProfile.isFollowed ? 'Salvo' : 'Salvar missionário'}
+                icon={visibleProfile.isFollowed ? 'check' : 'bookmark'}
+                variant={visibleProfile.isFollowed ? 'secondary' : 'primary'}
+                onPress={handleFollow}
+              />
+              <Button
+                title="Contribuir"
+                icon="gift"
+                variant="outline"
+                onPress={() =>
+                  Alert.alert(
+                    'Contribuição demonstrativa',
+                    'Esta ação é apenas uma demonstração. Nenhum valor ou dado financeiro será solicitado.',
+                  )
+                }
+                testID="demo-contribution"
+              />
+            </>
+          )}
         </View>
 
         {visibleProfile.bio && (
@@ -118,7 +143,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 24, fontFamily: 'Inter_700Bold', marginBottom: 4 },
   location: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
   country: { fontSize: 16, fontFamily: 'Inter_400Regular' },
-  actions: { marginBottom: 24 },
+  actions: { marginBottom: 24, flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center' },
   bio: { fontSize: 16, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 24 },
   posts: { padding: 16 },
   sectionTitle: { fontSize: 20, fontFamily: 'Inter_700Bold', marginBottom: 16, paddingHorizontal: 8 },

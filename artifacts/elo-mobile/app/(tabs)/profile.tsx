@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { AppSafeAreaView } from '../../components/AppSafeAreaView';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 import { useColors } from '../../hooks/useColors';
+import { SupporterProfile } from '../../components/SupporterProfile';
 
 export default function ProfileScreen() {
   const { user, isLoading } = useAuth();
@@ -18,11 +19,9 @@ export default function ProfileScreen() {
     );
   }
 
-  if (user?.role !== 'MISSIONARY') {
-    return <Redirect href="/(tabs)" />;
-  }
+  if (!user) return <Redirect href="/" />;
 
-  return <MissionaryProfile />;
+  return user.role === 'MISSIONARY' ? <MissionaryProfile /> : <SupporterProfile />;
 }
 
 const styles = StyleSheet.create({

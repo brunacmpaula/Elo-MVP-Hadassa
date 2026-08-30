@@ -51,7 +51,7 @@ export default function LoginScreen() {
           />
           
           <Button
-            title="Sou Intercessor"
+            title="Sou Apoiador"
             icon="heart"
             variant="outline"
             fullWidth

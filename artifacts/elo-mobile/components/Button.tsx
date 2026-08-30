@@ -17,9 +17,10 @@ interface ButtonProps {
   textStyle?: StyleProp<TextStyle>;
   fullWidth?: boolean;
   accessibilityLabel?: string;
+  testID?: string;
 }
 
-export function Button({ onPress, title, icon, variant = 'primary', size = 'md', loading, disabled, style, textStyle, fullWidth, accessibilityLabel }: ButtonProps) {
+export function Button({ onPress, title, icon, variant = 'primary', size = 'md', loading, disabled, style, textStyle, fullWidth, accessibilityLabel, testID }: ButtonProps) {
   const colors = useColors();
   
   const handlePress = () => {
@@ -49,6 +50,7 @@ export function Button({ onPress, title, icon, variant = 'primary', size = 'md',
       onPress={handlePress}
       disabled={disabled || loading}
       accessibilityLabel={accessibilityLabel || title}
+      testID={testID}
       accessibilityRole="button"
       style={({ pressed }) => [
         styles.base,

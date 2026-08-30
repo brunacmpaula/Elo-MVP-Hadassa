@@ -93,6 +93,7 @@ test("preferences persist and redact public profile data", async (t) => {
   assert.notEqual(missionaryToken, secondMissionaryToken);
   const otherMissionaryToken = await login("joao@elo.demo");
   const supporterToken = await login("marina@elo.demo");
+    const secondSupporterToken = await login("bruno@elo.demo");
   const missionaryHeaders = {
     authorization: `Bearer ${missionaryToken}`,
     "content-type": "application/json",
@@ -143,6 +144,10 @@ test("preferences persist and redact public profile data", async (t) => {
     const visiblePreferences = {
       hiddenFields: [],
       womenOnlyNotifications: false,
+    };
+    const secondSupporterHeaders = {
+      authorization: `Bearer ${secondSupporterToken}`,
+      "content-type": "application/json",
     };
     const madeVisible = await jsonRequest(
       "/missionaries/missionary-ana/preferences",
@@ -250,6 +255,103 @@ test("preferences persist and redact public profile data", async (t) => {
     });
     assert.equal(ownerCreate.response.status, 201);
     assert.equal(ownerCreate.body.missionaryId, "missionary-ana");
+
+    const saveMissionary = await jsonRequest(
+      "/missionaries/missionary-lucia/follow",
+      { method: "POST", headers: supporterHeaders },
+    );
+    assert.equal(saveMissionary.response.status, 200);
+    const marinaMissionaries = await jsonRequest("/missionaries", {
+      headers: supporterHeaders,
+    });
+    const brunoMissionaries = await jsonRequest("/missionaries", {
+      headers: secondSupporterHeaders,
+    });
+    assert.equal(
+      marinaMissionaries.body.find((item) => item.id === "missionary-lucia")
+        .isFollowed,
+      true,
+    );
+    assert.equal(
+      brunoMissionaries.body.find((item) => item.id === "missionary-lucia")
+        .isFollowed,
+      false,
+    );
+
+    const missionaryComment = await jsonRequest(
+      "/posts/post-school/comments",
+      {
+        method: "POST",
+        headers: missionaryHeaders,
+        body: JSON.stringify({
+          content: "Tentativa indevida",
+          clientOperationId: "comment-role-test",
+        }),
+      },
+    );
+    assert.equal(missionaryComment.response.status, 403);
+    const commentPayload = {
+      content: "Estamos juntos nesta missão.",
+      clientOperationId: "supporter-comment-idempotency",
+    };
+    const firstComment = await jsonRequest("/posts/post-school/comments", {
+      method: "POST",
+      headers: supporterHeaders,
+      body: JSON.stringify(commentPayload),
+    });
+    const duplicateComment = await jsonRequest("/posts/post-school/comments", {
+      method: "POST",
+      headers: supporterHeaders,
+      body: JSON.stringify(commentPayload),
+    });
+    assert.equal(firstComment.response.status, 201);
+    assert.equal(duplicateComment.body.id, firstComment.body.id);
+    const comments = await jsonRequest("/posts/post-school/comments");
+    assert.equal(
+      comments.body.filter((item) => item.id === firstComment.body.id).length,
+      1,
+    );
+
+    const mediaPayload = {
+      clientMediaId: "privacy-media-1",
+      uri: "data:image/jpeg;base64,aGVsbG8=",
+      thumbnailUri: "data:image/jpeg;base64,aGVsbG8=",
+      mimeType: "image/jpeg",
+      sizeBytes: 5,
+      width: 20,
+      height: 20,
+    };
+    const mediaPostInput = {
+      missionaryId: "missionary-joao",
+      type: "UPDATE",
+      title: "Publicação com imagem",
+      content: "Imagem preparada no dispositivo.",
+      clientOperationId: "media-post-idempotency",
+      media: [mediaPayload],
+    };
+    const firstMediaPost = await jsonRequest("/posts", {
+      method: "POST",
+      headers: missionaryHeaders,
+      body: JSON.stringify(mediaPostInput),
+    });
+    const duplicateMediaPost = await jsonRequest("/posts", {
+      method: "POST",
+      headers: missionaryHeaders,
+      body: JSON.stringify(mediaPostInput),
+    });
+    assert.equal(firstMediaPost.response.status, 201);
+    assert.equal(firstMediaPost.body.media.length, 1);
+    assert.equal(duplicateMediaPost.body.id, firstMediaPost.body.id);
+    const invalidMediaPost = await jsonRequest("/posts", {
+      method: "POST",
+      headers: missionaryHeaders,
+      body: JSON.stringify({
+        ...mediaPostInput,
+        clientOperationId: "invalid-media-size",
+        media: [{ ...mediaPayload, sizeBytes: 6 }],
+      }),
+    });
+    assert.equal(invalidMediaPost.response.status, 400);
 
     const unauthenticatedUpdate = await jsonRequest("/posts/post-school", {
       method: "PATCH",

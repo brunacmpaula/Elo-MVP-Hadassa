@@ -93,6 +93,47 @@ export const PostStatus = {
   SYNC_FAILED: 'SYNC_FAILED',
 } as const;
 
+export type PostMediaInputMimeType = typeof PostMediaInputMimeType[keyof typeof PostMediaInputMimeType];
+
+
+export const PostMediaInputMimeType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+} as const;
+
+export interface PostMediaInput {
+  /** @minLength 1 */
+  clientMediaId: string;
+  /** Compressed image data URL kept locally until synchronization. */
+  uri: string;
+  /** Thumbnail data URL used for fast list rendering. */
+  thumbnailUri: string;
+  mimeType: PostMediaInputMimeType;
+  /**
+     * Whole number of bytes.
+     * @minimum 1
+     * @maximum 1500000
+     */
+  sizeBytes: number;
+  /** @minimum 1 */
+  width: number;
+  /** @minimum 1 */
+  height: number;
+}
+
+export type PostMedia = PostMediaInput & {
+  id: string;
+};
+
+export interface Comment {
+  id: string;
+  postId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface Post {
   id: string;
   missionaryId: string;
@@ -108,6 +149,10 @@ export interface Post {
   /** @minimum 0 */
   prayerCount: number;
   prayedByMe: boolean;
+  /** Whether the authenticated supporter saved this missionary. */
+  missionarySaved: boolean;
+  media: PostMedia[];
+  comments: Comment[];
 }
 
 export type MissionaryProfile = Missionary & {
@@ -146,6 +191,8 @@ export interface PostInput {
   content: string;
   /** @minLength 1 */
   clientOperationId: string;
+  /** @maxItems 4 */
+  media?: PostMediaInput[];
 }
 
 export interface PostUpdate {
@@ -165,6 +212,16 @@ export interface PrayerState {
   prayedByMe: boolean;
   /** @minimum 0 */
   prayerCount: number;
+}
+
+export interface CommentInput {
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  content: string;
+  /** @minLength 1 */
+  clientOperationId: string;
 }
 
 export type SyncOperationEntityType = typeof SyncOperationEntityType[keyof typeof SyncOperationEntityType];

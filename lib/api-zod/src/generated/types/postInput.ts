@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PostInputType } from './postInputType';
+import type { PostMediaInput } from './postMediaInput';
 
 export interface PostInput {
   missionaryId: string;
@@ -16,4 +17,6 @@ export interface PostInput {
   content: string;
   /** @minLength 1 */
   clientOperationId: string;
+  /** @maxItems 4 */
+  media?: PostMediaInput[];
 }

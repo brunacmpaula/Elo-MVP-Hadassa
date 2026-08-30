@@ -68,6 +68,11 @@ export const GetMissionaryParams = zod.object({
 export const getMissionaryResponseTwoPostsItemPrayerCountMin = 0;
 
 
+export const getMissionaryResponseTwoPostsItemMediaItemOneSizeBytesMax = 1500000;
+
+
+
+
 
 export const GetMissionaryResponse = zod.object({
   "id": zod.string(),
@@ -92,7 +97,26 @@ export const GetMissionaryResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "prayerCount": zod.number().min(getMissionaryResponseTwoPostsItemPrayerCountMin),
-  "prayedByMe": zod.boolean()
+  "prayedByMe": zod.boolean(),
+  "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
+  "media": zod.array(zod.object({
+  "clientMediaId": zod.string().min(1),
+  "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
+  "thumbnailUri": zod.string().describe('Thumbnail data URL used for fast list rendering.'),
+  "mimeType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "sizeBytes": zod.number().min(1).max(getMissionaryResponseTwoPostsItemMediaItemOneSizeBytesMax).describe('Whole number of bytes.'),
+  "width": zod.number().min(1),
+  "height": zod.number().min(1)
+}).and(zod.object({
+  "id": zod.string()
+}))),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "postId": zod.string(),
+  "authorName": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
 }))
 }))
 
@@ -165,6 +189,11 @@ export const ListPostsQueryParams = zod.object({
 export const listPostsResponsePrayerCountMin = 0;
 
 
+export const listPostsResponseMediaItemOneSizeBytesMax = 1500000;
+
+
+
+
 
 export const ListPostsResponseItem = zod.object({
   "id": zod.string(),
@@ -178,7 +207,26 @@ export const ListPostsResponseItem = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "prayerCount": zod.number().min(listPostsResponsePrayerCountMin),
-  "prayedByMe": zod.boolean()
+  "prayedByMe": zod.boolean(),
+  "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
+  "media": zod.array(zod.object({
+  "clientMediaId": zod.string().min(1),
+  "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
+  "thumbnailUri": zod.string().describe('Thumbnail data URL used for fast list rendering.'),
+  "mimeType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "sizeBytes": zod.number().min(1).max(listPostsResponseMediaItemOneSizeBytesMax).describe('Whole number of bytes.'),
+  "width": zod.number().min(1),
+  "height": zod.number().min(1)
+}).and(zod.object({
+  "id": zod.string()
+}))),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "postId": zod.string(),
+  "authorName": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
 })
 export const ListPostsResponse = zod.array(ListPostsResponseItem)
 
@@ -190,16 +238,37 @@ export const ListPostsResponse = zod.array(ListPostsResponseItem)
 
 
 
+export const createPostBodyMediaItemSizeBytesMax = 1500000;
+
+
+
+export const createPostBodyMediaMax = 4;
+
+
 
 export const CreatePostBody = zod.object({
   "missionaryId": zod.string(),
   "type": zod.enum(['UPDATE', 'PRAYER_REQUEST', 'NEED']),
   "title": zod.string().min(1),
   "content": zod.string().min(1),
-  "clientOperationId": zod.string().min(1)
+  "clientOperationId": zod.string().min(1),
+  "media": zod.array(zod.object({
+  "clientMediaId": zod.string().min(1),
+  "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
+  "thumbnailUri": zod.string().describe('Thumbnail data URL used for fast list rendering.'),
+  "mimeType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "sizeBytes": zod.number().min(1).max(createPostBodyMediaItemSizeBytesMax).describe('Whole number of bytes.'),
+  "width": zod.number().min(1),
+  "height": zod.number().min(1)
+})).max(createPostBodyMediaMax).optional()
 })
 
 export const createPostResponsePrayerCountMin = 0;
+
+
+export const createPostResponseMediaItemOneSizeBytesMax = 1500000;
+
+
 
 
 
@@ -215,7 +284,26 @@ export const CreatePostResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "prayerCount": zod.number().min(createPostResponsePrayerCountMin),
-  "prayedByMe": zod.boolean()
+  "prayedByMe": zod.boolean(),
+  "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
+  "media": zod.array(zod.object({
+  "clientMediaId": zod.string().min(1),
+  "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
+  "thumbnailUri": zod.string().describe('Thumbnail data URL used for fast list rendering.'),
+  "mimeType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "sizeBytes": zod.number().min(1).max(createPostResponseMediaItemOneSizeBytesMax).describe('Whole number of bytes.'),
+  "width": zod.number().min(1),
+  "height": zod.number().min(1)
+}).and(zod.object({
+  "id": zod.string()
+}))),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "postId": zod.string(),
+  "authorName": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 
@@ -227,6 +315,11 @@ export const GetPostParams = zod.object({
 })
 
 export const getPostResponsePrayerCountMin = 0;
+
+
+export const getPostResponseMediaItemOneSizeBytesMax = 1500000;
+
+
 
 
 
@@ -242,7 +335,26 @@ export const GetPostResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "prayerCount": zod.number().min(getPostResponsePrayerCountMin),
-  "prayedByMe": zod.boolean()
+  "prayedByMe": zod.boolean(),
+  "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
+  "media": zod.array(zod.object({
+  "clientMediaId": zod.string().min(1),
+  "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
+  "thumbnailUri": zod.string().describe('Thumbnail data URL used for fast list rendering.'),
+  "mimeType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "sizeBytes": zod.number().min(1).max(getPostResponseMediaItemOneSizeBytesMax).describe('Whole number of bytes.'),
+  "width": zod.number().min(1),
+  "height": zod.number().min(1)
+}).and(zod.object({
+  "id": zod.string()
+}))),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "postId": zod.string(),
+  "authorName": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
 })
 
 
@@ -265,6 +377,11 @@ export const UpdatePostBody = zod.object({
 export const updatePostResponsePrayerCountMin = 0;
 
 
+export const updatePostResponseMediaItemOneSizeBytesMax = 1500000;
+
+
+
+
 
 export const UpdatePostResponse = zod.object({
   "id": zod.string(),
@@ -278,7 +395,69 @@ export const UpdatePostResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
   "prayerCount": zod.number().min(updatePostResponsePrayerCountMin),
-  "prayedByMe": zod.boolean()
+  "prayedByMe": zod.boolean(),
+  "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
+  "media": zod.array(zod.object({
+  "clientMediaId": zod.string().min(1),
+  "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
+  "thumbnailUri": zod.string().describe('Thumbnail data URL used for fast list rendering.'),
+  "mimeType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "sizeBytes": zod.number().min(1).max(updatePostResponseMediaItemOneSizeBytesMax).describe('Whole number of bytes.'),
+  "width": zod.number().min(1),
+  "height": zod.number().min(1)
+}).and(zod.object({
+  "id": zod.string()
+}))),
+  "comments": zod.array(zod.object({
+  "id": zod.string(),
+  "postId": zod.string(),
+  "authorName": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary List comments on a post
+ */
+export const ListPostCommentsParams = zod.object({
+  "postId": zod.coerce.string()
+})
+
+export const ListPostCommentsResponseItem = zod.object({
+  "id": zod.string(),
+  "postId": zod.string(),
+  "authorName": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListPostCommentsResponse = zod.array(ListPostCommentsResponseItem)
+
+
+/**
+ * @summary Add a supporter comment to a post
+ */
+export const CreatePostCommentParams = zod.object({
+  "postId": zod.coerce.string()
+})
+
+export const createPostCommentBodyContentMax = 500;
+
+
+
+
+export const CreatePostCommentBody = zod.object({
+  "content": zod.string().min(1).max(createPostCommentBodyContentMax),
+  "clientOperationId": zod.string().min(1)
+})
+
+export const CreatePostCommentResponse = zod.object({
+  "id": zod.string(),
+  "postId": zod.string(),
+  "authorName": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
 })
 
 

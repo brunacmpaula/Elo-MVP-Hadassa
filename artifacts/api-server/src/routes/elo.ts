@@ -5,8 +5,11 @@ import {
   type Response,
 } from "express";
 import {
+  CreatePostCommentBody,
+  CreatePostCommentResponse,
   CreatePostBody,
   CreatePostResponse,
+  ListPostCommentsResponse,
   FollowMissionaryResponse,
   GetMissionaryResponse,
   GetMissionaryPreferencesResponse,
@@ -66,6 +69,28 @@ type Post = {
   updatedAt: string;
   prayerCount: number;
   prayedByMe: boolean;
+  missionarySaved: boolean;
+  media: PostMedia[];
+  comments: Comment[];
+};
+
+type PostMedia = {
+  id: string;
+  clientMediaId: string;
+  uri: string;
+  thumbnailUri: string;
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
+  sizeBytes: number;
+  width: number;
+  height: number;
+};
+
+type Comment = {
+  id: string;
+  postId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
 };
 
 type Missionary = {
@@ -132,6 +157,9 @@ const posts: Post[] = [
     updatedAt: now,
     prayerCount: 42,
     prayedByMe: false,
+    missionarySaved: false,
+    media: [],
+    comments: [],
   },
   {
     id: "post-school",
@@ -147,10 +175,17 @@ const posts: Post[] = [
     updatedAt: now,
     prayerCount: 18,
     prayedByMe: false,
+    missionarySaved: false,
+    media: [],
+    comments: [],
   },
 ];
 
 const processedOperations = new Map<string, string>();
+const processedComments = new Map<string, string>();
+const followedMissionariesByUser = new Map<string, Set<string>>([
+  ["user-supporter", new Set(["missionary-ana", "missionary-joao"])],
+]);
 const router: IRouter = Router();
 const DEFAULT_PROFILE_PREFERENCES: ProfilePreferences = {
   hiddenFields: [],
@@ -196,6 +231,19 @@ const demoCredentialsByEmail = new Map<
         id: "user-supporter",
         name: "Marina",
         email: "marina@elo.demo",
+        role: "SUPPORTER",
+        gender: "MALE",
+      },
+    },
+  ],
+  [
+    "bruno@elo.demo",
+    {
+      password: "demo",
+      user: {
+        id: "user-supporter-bruno",
+        name: "Bruno",
+        email: "bruno@elo.demo",
         role: "SUPPORTER",
         gender: "MALE",
       },
@@ -364,6 +412,93 @@ function ensureMissionaryUser(req: Request, res: Response) {
   return missionary;
 }
 
+function ensureSupporterUser(req: Request, res: Response) {
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: "Autenticação necessária" });
+    return null;
+  }
+  if (user.role !== "SUPPORTER") {
+    res.status(403).json({ error: "Acesso restrito a apoiadores" });
+    return null;
+  }
+  return user;
+}
+
+function getFollowedMissionaries(userId: string) {
+  let followed = followedMissionariesByUser.get(userId);
+  if (!followed) {
+    followed = new Set();
+    followedMissionariesByUser.set(userId, followed);
+  }
+  return followed;
+}
+
+const MAX_MEDIA_BYTES = 1_500_000;
+const ALLOWED_MEDIA_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+function decodedDataUrlBytes(uri: string) {
+  const match = /^data:image\/(?:jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
+    uri,
+  );
+  if (!match) return null;
+  return Buffer.from(match[1], "base64").byteLength;
+}
+
+function normalizePostMedia(
+  input: Array<{
+    clientMediaId: string;
+    uri: string;
+    thumbnailUri: string;
+    mimeType: string;
+    sizeBytes: number;
+    width: number;
+    height: number;
+  }> = [],
+) {
+  if (input.length > 4) throw new Error("Máximo de 4 imagens por publicação");
+  const seen = new Set<string>();
+  return input.map((item) => {
+    if (seen.has(item.clientMediaId)) {
+      throw new Error("A mesma imagem foi enviada mais de uma vez");
+    }
+    seen.add(item.clientMediaId);
+    const decodedBytes = decodedDataUrlBytes(item.uri);
+    const thumbnailBytes = decodedDataUrlBytes(item.thumbnailUri);
+    if (
+      !ALLOWED_MEDIA_TYPES.has(item.mimeType) ||
+      decodedBytes === null ||
+      thumbnailBytes === null
+    ) {
+      throw new Error("Formato de imagem inválido");
+    }
+    if (
+      !Number.isInteger(item.sizeBytes) ||
+      item.sizeBytes !== decodedBytes ||
+      decodedBytes > MAX_MEDIA_BYTES
+    ) {
+      throw new Error("Imagem maior que o limite de 1,5 MB");
+    }
+    if (
+      !Number.isInteger(item.width) ||
+      !Number.isInteger(item.height) ||
+      item.width < 1 ||
+      item.height < 1
+    ) {
+      throw new Error("Dimensões de imagem inválidas");
+    }
+    return {
+      ...item,
+      id: `media-${item.clientMediaId}`,
+      mimeType: item.mimeType as PostMedia["mimeType"],
+    };
+  });
+}
+
 function ensurePostOwner(req: Request, res: Response, post: Post) {
   const missionary = ensureMissionaryUser(req, res);
   if (!missionary) return null;
@@ -389,6 +524,10 @@ async function toPublicMissionary(
 
   return {
     ...alwaysPublic,
+    isFollowed:
+      viewer?.role === "SUPPORTER"
+        ? getFollowedMissionaries(viewer.id).has(missionary.id)
+        : false,
     ...(isOwner || !preferences.hiddenFields.includes("email") ? { email } : {}),
     ...(isOwner || !preferences.hiddenFields.includes("bio") ? { bio } : {}),
     ...(isOwner || !preferences.hiddenFields.includes("location")
@@ -399,15 +538,22 @@ async function toPublicMissionary(
 
 async function toPublicPost(post: Post, viewer: SessionUser | null) {
   const missionary = findMissionary(post.missionaryId);
-  if (!missionary) return post;
+  const viewerPost = {
+    ...post,
+    missionarySaved:
+      viewer?.role === "SUPPORTER"
+        ? getFollowedMissionaries(viewer.id).has(post.missionaryId)
+        : false,
+  };
+  if (!missionary) return viewerPost;
   const preferences = await getProfilePreferences(missionary.userId);
   if (
     viewer?.id === missionary.userId ||
     !preferences.hiddenFields.includes("location")
   ) {
-    return post;
+    return viewerPost;
   }
-  const { missionaryCountry: _hiddenCountry, ...publicPost } = post;
+  const { missionaryCountry: _hiddenCountry, ...publicPost } = viewerPost;
   return publicPost;
 }
 
@@ -500,7 +646,9 @@ router.post("/missionaries/:missionaryId/follow", (req, res) => {
     res.status(404).json({ error: "Missionário não encontrado" });
     return;
   }
-  missionary.isFollowed = true;
+  const supporter = ensureSupporterUser(req, res);
+  if (!supporter) return;
+  getFollowedMissionaries(supporter.id).add(missionary.id);
   res.json(
     FollowMissionaryResponse.parse({
       missionaryId: missionary.id,
@@ -515,7 +663,9 @@ router.delete("/missionaries/:missionaryId/follow", (req, res) => {
     res.status(404).json({ error: "Missionário não encontrado" });
     return;
   }
-  missionary.isFollowed = false;
+  const supporter = ensureSupporterUser(req, res);
+  if (!supporter) return;
+  getFollowedMissionaries(supporter.id).delete(missionary.id);
   res.json(
     UnfollowMissionaryResponse.parse({
       missionaryId: missionary.id,
@@ -539,7 +689,12 @@ router.get("/posts", async (req, res) => {
 router.post("/posts", async (req, res) => {
   const authenticatedMissionary = ensureMissionaryUser(req, res);
   if (!authenticatedMissionary) return;
-  const input = CreatePostBody.parse(req.body);
+  const parsedInput = CreatePostBody.safeParse(req.body);
+  if (!parsedInput.success) {
+    res.status(400).json({ error: "Publicação ou imagem inválida" });
+    return;
+  }
+  const input = parsedInput.data;
   const existingId = processedOperations.get(input.clientOperationId);
   const existing = existingId
     ? posts.find((post) => post.id === existingId)
@@ -555,6 +710,15 @@ router.post("/posts", async (req, res) => {
 
   const missionary = authenticatedMissionary;
 
+  let media: PostMedia[];
+  try {
+    media = normalizePostMedia(input.media ?? []);
+  } catch (error) {
+    res.status(400).json({
+      error: error instanceof Error ? error.message : "Imagem inválida",
+    });
+    return;
+  }
   const timestamp = new Date().toISOString();
   const post: Post = {
     id: `post-${Date.now()}`,
@@ -569,6 +733,9 @@ router.post("/posts", async (req, res) => {
     updatedAt: timestamp,
     prayerCount: 0,
     prayedByMe: false,
+    missionarySaved: false,
+    media,
+    comments: [],
   };
   posts.unshift(post);
   missionary.latestPostType = post.type;
@@ -612,6 +779,54 @@ router.patch("/posts/:postId", (req, res) => {
   if (input.content) post.content = input.content;
   post.updatedAt = new Date().toISOString();
   res.json(UpdatePostResponse.parse(post));
+});
+
+router.get("/posts/:postId/comments", (req, res) => {
+  const post = posts.find((item) => item.id === req.params["postId"]);
+  if (!post) {
+    res.status(404).json({ error: "Publicação não encontrada" });
+    return;
+  }
+  res.json(ListPostCommentsResponse.parse(post.comments));
+});
+
+router.post("/posts/:postId/comments", (req, res) => {
+  const post = posts.find((item) => item.id === req.params["postId"]);
+  if (!post) {
+    res.status(404).json({ error: "Publicação não encontrada" });
+    return;
+  }
+  const supporter = ensureSupporterUser(req, res);
+  if (!supporter) return;
+  const parsed = CreatePostCommentBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Comentário inválido" });
+    return;
+  }
+  const content = parsed.data.content.trim();
+  if (!content) {
+    res.status(400).json({ error: "Escreva uma mensagem antes de enviar" });
+    return;
+  }
+  const operationKey = `${supporter.id}:${parsed.data.clientOperationId}`;
+  const existingId = processedComments.get(operationKey);
+  const existing = existingId
+    ? posts.flatMap((item) => item.comments).find((item) => item.id === existingId)
+    : undefined;
+  if (existing) {
+    res.status(201).json(CreatePostCommentResponse.parse(existing));
+    return;
+  }
+  const comment: Comment = {
+    id: `comment-${randomUUID()}`,
+    postId: post.id,
+    authorName: supporter.name,
+    content,
+    createdAt: new Date().toISOString(),
+  };
+  post.comments.push(comment);
+  processedComments.set(operationKey, comment.id);
+  res.status(201).json(CreatePostCommentResponse.parse(comment));
 });
 
 router.post("/posts/:postId/prayers", (req, res) => {
@@ -686,6 +901,15 @@ router.post("/sync", (req, res) => {
       type?: Post["type"];
       title?: string;
       content?: string;
+      media?: Array<{
+        clientMediaId: string;
+        uri: string;
+        thumbnailUri: string;
+        mimeType: string;
+        sizeBytes: number;
+        width: number;
+        height: number;
+      }>;
     };
     const missionary = authenticatedMissionary;
     if (!payload.type || !payload.title || !payload.content) {
@@ -697,6 +921,17 @@ router.post("/sync", (req, res) => {
       };
     }
 
+    let media: PostMedia[];
+    try {
+      media = normalizePostMedia(payload.media ?? []);
+    } catch (error) {
+      return {
+        operationId: operation.operationId,
+        status: "FAILED" as const,
+        entityId: operation.entityId,
+        error: error instanceof Error ? error.message : "Imagem inválida",
+      };
+    }
     const timestamp = new Date().toISOString();
     const existing = posts.find((post) => post.id === operation.entityId);
     if (existing) {
@@ -712,6 +947,7 @@ router.post("/sync", (req, res) => {
       existing.content = payload.content;
       existing.status = "PUBLISHED";
       existing.updatedAt = timestamp;
+      existing.media = media;
     } else {
       posts.unshift({
         id: operation.entityId,
@@ -726,6 +962,9 @@ router.post("/sync", (req, res) => {
         updatedAt: timestamp,
         prayerCount: 0,
         prayedByMe: false,
+        missionarySaved: false,
+        media,
+        comments: [],
       });
     }
     processedOperations.set(operation.operationId, operation.entityId);

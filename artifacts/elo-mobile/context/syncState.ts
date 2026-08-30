@@ -1,4 +1,8 @@
-import type { Post, PostInputType } from '@workspace/api-client-react';
+import type {
+  Post,
+  PostInputType,
+  PostMediaInput,
+} from '@workspace/api-client-react';
 
 export type SyncOp = {
   id: string;
@@ -8,6 +12,7 @@ export type SyncOp = {
     content: string;
     type: PostInputType;
     clientOperationId: string;
+    media: PostMediaInput[];
   };
   status: 'PENDING' | 'SYNCING' | 'FAILED';
   retryCount: number;
@@ -16,6 +21,13 @@ export type SyncOp = {
 export type SyncState = {
   queue: SyncOp[];
   localPosts: Post[];
+};
+
+export type QueueSummary = {
+  publicationCount: number;
+  imageCount: number;
+  totalBytes: number;
+  failedCount: number;
 };
 
 export function dedupeQueue(operations: SyncOp[]): SyncOp[] {
@@ -56,17 +68,52 @@ export function getPendingOperations(queue: SyncOp[]): SyncOp[] {
 export function markOperationSucceeded(
   state: SyncState,
   operationId: string,
-  publishedPost: Post,
 ): SyncState {
   return {
     queue: state.queue.filter((operation) => operation.id !== operationId),
-    localPosts: dedupePosts([
-      { ...publishedPost, status: 'PUBLISHED' },
-      ...state.localPosts.filter(
-        (post) => post.id !== operationId && post.id !== publishedPost.id,
-      ),
-    ]),
+    localPosts: state.localPosts.filter((post) => post.id !== operationId),
   };
+}
+
+export function getQueueSummary(queue: SyncOp[]): QueueSummary {
+  return dedupeQueue(queue).reduce<QueueSummary>(
+    (summary, operation) => ({
+      publicationCount: summary.publicationCount + 1,
+      imageCount: summary.imageCount + operation.payload.media.length,
+      totalBytes:
+        summary.totalBytes +
+        operation.payload.media.reduce(
+          (total, item) => total + item.sizeBytes,
+          0,
+        ),
+      failedCount:
+        summary.failedCount + (operation.status === 'FAILED' ? 1 : 0),
+    }),
+    {
+      publicationCount: 0,
+      imageCount: 0,
+      totalBytes: 0,
+      failedCount: 0,
+    },
+  );
+}
+
+export function formatPendingBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function getSyncBlockReason(input: {
+  isConnectionKnown: boolean;
+  isOffline: boolean;
+  syncOnlyOnWifi: boolean;
+  isWifi: boolean;
+}): 'CHECKING_CONNECTION' | 'OFFLINE' | 'WIFI_REQUIRED' | null {
+  if (!input.isConnectionKnown) return 'CHECKING_CONNECTION';
+  if (input.isOffline) return 'OFFLINE';
+  if (input.syncOnlyOnWifi && !input.isWifi) return 'WIFI_REQUIRED';
+  return null;
 }
 
 export function markOperationFailed(

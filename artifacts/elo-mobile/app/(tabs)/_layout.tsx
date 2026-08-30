@@ -32,12 +32,10 @@ function NativeTabLayout() {
           <Label>Fila</Label>
         </NativeTabs.Trigger>
       )}
-      {isMissionary && (
-        <NativeTabs.Trigger name="profile">
+      <NativeTabs.Trigger name="profile">
           <Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
           <Label>Perfil</Label>
-        </NativeTabs.Trigger>
-      )}
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -127,7 +125,7 @@ function ClassicTabLayout() {
         name="profile"
         options={{
           title: 'Perfil',
-          href: !isMissionary ? null : '/profile',
+          href: '/profile',
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="person.crop.circle" tintColor={color} size={24} />
