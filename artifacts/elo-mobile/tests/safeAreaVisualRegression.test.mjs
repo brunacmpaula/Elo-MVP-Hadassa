@@ -120,6 +120,9 @@ const screenScenarios = [
       'edges={[' + "'top'" + ']}',
       'useTabContentBottomPadding',
       'testID="explore-screen"',
+      'testID="explore-search-input"',
+      'testID="explore-search-clear"',
+      'testID="explore-no-results"',
     ],
   },
   {
@@ -402,6 +405,26 @@ test('keeps both tab-bar modes safe on iPhone, Android and web', () => {
       );
     }
   }
+});
+
+test('keeps Explore search local, accessible, accent-insensitive, and privacy-aware', () => {
+  assert.match(sources.explore, /useState<string>\(''\)/);
+  assert.match(sources.explore, /normalize\('NFD'\)/);
+  assert.match(sources.explore, /replace\(\/\[\\u0300-\\u036f\]\/g, ''\)/);
+  assert.match(sources.explore, /toLowerCase\(\)/);
+  assert.match(sources.explore, /trim\(\)/);
+  assert.match(sources.explore, /missionary\.name, missionary\.country/);
+  assert.match(sources.explore, /visibleMissionaries \?\? \[\]/);
+  assert.match(sources.explore, /placeholder="Buscar por nome ou região"/);
+  assert.match(sources.explore, /accessibilityLabel="Buscar missionários por nome ou região"/);
+  assert.match(sources.explore, /accessibilityLabel="Limpar busca"/);
+  assert.match(sources.explore, /onPress=\{\(\) => setSearchQuery\(''\)\}/);
+  assert.match(sources.explore, /keyboardShouldPersistTaps="handled"/);
+  assert.match(sources.explore, /keyboardDismissMode="on-drag"/);
+  assert.match(sources.explore, /contentInsetAdjustmentBehavior=\{nativeTabs \? 'automatic' : 'never'\}/);
+  assert.match(sources.explore, /paddingBottom: listBottomPadding/);
+  assert.match(sources.explore, /Nenhum missionário encontrado\./);
+  assert.match(sources.explore, /Tente buscar por outro nome ou região\./);
 });
 
 for (const scenario of screenScenarios) {
