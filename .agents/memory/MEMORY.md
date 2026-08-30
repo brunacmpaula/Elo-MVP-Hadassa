@@ -7,3 +7,4 @@
 - [Post persistence migrations](post-persistence-migrations.md) — backfill known legacy parents before enforcing foreign keys on existing child records.
 - [Offline sync state commits](offline-sync-state-commits.md) — serialize durable sync writes, persist local-to-server ID mappings, and invalidate stale in-flight generations on clear.
 - [Auth route ownership](auth-route-ownership.md) — let protected root routes react to auth state; avoid imperative navigation while nested navigators mount or unmount.
+- [Video artifact registration](video-artifact-registration.md) — verify delegated video builds appear in listArtifacts before trusting their folder or workflow state.

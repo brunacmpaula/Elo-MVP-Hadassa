@@ -1,0 +1,10 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "AcVC7tToTc267fMlnfMo9"
+uri = "file://artifacts/elo-promo-video/public/audio/bg_music.mp3"
+type = "audio"
+title = "Elo background music"
+description = "Generated music: Cinematic uplifting instrumental background music scoring a mission-driven mobile product demonstration. Warm felt piano, gentle acoustic pulse, soft strings, subtle organic percussi…"
+logical_id = "c41348a8-4fa9-4805-82e6-7c18ac87f265"

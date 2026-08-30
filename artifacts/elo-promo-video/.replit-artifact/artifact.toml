@@ -1,0 +1,29 @@
+kind = "video"
+previewPath = "/elo-promo-video/"
+title = "Elo — Vídeo Demonstrativo"
+description = "Vídeo demonstrativo em 16:9 que apresenta a jornada do Elo: descoberta de missionários, acompanhamento, oração e publicação offline com sincronização."
+version = "1.0.0"
+id = "artifacts/elo-promo-video"
+router = "path"
+videoAspectRatio = "16:9"
+
+[[services]]
+name = "web"
+paths = [ "/elo-promo-video/" ]
+localPort = 21638
+
+[services.development]
+run = "pnpm --filter @workspace/elo-promo-video run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/elo-promo-video", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/elo-promo-video/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21638"
+BASE_PATH = "/elo-promo-video/"
