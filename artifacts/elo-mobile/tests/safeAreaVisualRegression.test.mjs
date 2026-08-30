@@ -538,6 +538,38 @@ test('filters real missionary data through the Explore search interaction', () =
   );
 });
 
+test('keeps compose message before update-only images and clears hidden media', () => {
+  const messagePosition = sources.compose.indexOf('Mensagem');
+  const imagesPosition = sources.compose.indexOf('Imagens');
+
+  assert.ok(messagePosition >= 0, 'compose form must keep the message field');
+  assert.ok(imagesPosition >= 0, 'compose form must keep the image field');
+  assert.ok(
+    messagePosition < imagesPosition,
+    'the message field must appear before the image section',
+  );
+  assert.match(
+    sources.compose,
+    /const handleTypeChange = \(nextType: PostInputType\) => \{\s*setType\(nextType\);\s*typeRef\.current = nextType;\s*if \(nextType !== 'UPDATE'\) \{\s*setMedia\(\[\]\);\s*setMediaError\(null\);\s*\}/,
+    'leaving UPDATE must discard selected media and pending media errors',
+  );
+  assert.match(
+    sources.compose,
+    /onPress=\{\(\) => handleTypeChange\(item\.value\)\}/,
+    'post type buttons must use the media-clearing type change handler',
+  );
+  assert.match(
+    sources.compose,
+    /\{type === 'UPDATE' && \(\s*<View style=\{styles\.field\}>\s*<Text[\s\S]*?Imagens/,
+    'the image section must render only for UPDATE posts',
+  );
+  assert.match(
+    sources.compose,
+    /type === 'UPDATE' \? media : \[\]/,
+    'non-UPDATE posts must never submit media',
+  );
+});
+
 for (const scenario of screenScenarios) {
   test(`visual contract: ${scenario.id} keeps controls inside the safe frame`, () => {
     for (const requiredFragment of scenario.required) {

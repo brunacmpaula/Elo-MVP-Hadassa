@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Image,
@@ -55,14 +55,25 @@ export function ComposePostModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [media, setMedia] = useState<PostMediaInput[]>([]);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const typeRef = useRef<PostInputType>(type);
 
   const resetAndClose = () => {
     setTitle('');
     setContent('');
     setType('PRAYER_REQUEST');
+    typeRef.current = 'PRAYER_REQUEST';
     setMedia([]);
     setMediaError(null);
     onClose();
+  };
+
+  const handleTypeChange = (nextType: PostInputType) => {
+    setType(nextType);
+    typeRef.current = nextType;
+    if (nextType !== 'UPDATE') {
+      setMedia([]);
+      setMediaError(null);
+    }
   };
 
   const chooseImages = async () => {
@@ -75,6 +86,7 @@ export function ComposePostModal({
       base64: true,
     });
     if (result.canceled) return;
+    if (typeRef.current !== 'UPDATE') return;
     const prepared: PostMediaInput[] = [];
     for (const asset of result.assets) {
       if (!asset.base64) {
@@ -113,7 +125,12 @@ export function ComposePostModal({
     if (!title.trim() || !content.trim()) return;
     setIsSubmitting(true);
     try {
-      await enqueueCreatePost(title.trim(), content.trim(), type, media);
+      await enqueueCreatePost(
+        title.trim(),
+        content.trim(),
+        type,
+        type === 'UPDATE' ? media : [],
+      );
       resetAndClose();
     } finally {
       setIsSubmitting(false);
@@ -182,7 +199,7 @@ export function ComposePostModal({
                   return (
                     <Pressable
                       key={item.value}
-                      onPress={() => setType(item.value)}
+                      onPress={() => handleTypeChange(item.value)}
                       accessibilityRole="button"
                       accessibilityState={{ selected }}
                       style={({ pressed }) => [
@@ -252,61 +269,6 @@ export function ComposePostModal({
 
               <View style={styles.field}>
                 <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
-                  Imagens
-                </Text>
-                <Text style={[styles.mediaHint, { color: colors.mutedForeground }]}>
-                  Até 4 imagens. Cada arquivo é comprimido e deve ter no máximo 1,5 MB.
-                </Text>
-                {media.length > 0 && (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={styles.previewRow}>
-                      {media.map((item) => (
-                        <View key={item.clientMediaId} style={styles.preview}>
-                          <Image source={{ uri: item.thumbnailUri }} style={styles.previewImage} />
-                          <Pressable
-                            onPress={() =>
-                              setMedia((current) =>
-                                current.filter(
-                                  (image) =>
-                                    image.clientMediaId !== item.clientMediaId,
-                                ),
-                              )
-                            }
-                            style={[
-                              styles.removeImage,
-                              { backgroundColor: colors.card },
-                            ]}
-                            accessibilityLabel="Remover imagem"
-                            testID={`remove-image-${item.clientMediaId}`}
-                          >
-                            <Feather name="x" size={16} color={colors.destructive} />
-                          </Pressable>
-                        </View>
-                      ))}
-                    </View>
-                  </ScrollView>
-                )}
-                {mediaError && (
-                  <Text
-                    style={[styles.mediaError, { color: colors.destructive }]}
-                    accessibilityRole="alert"
-                  >
-                    {mediaError}
-                  </Text>
-                )}
-                <Button
-                  title={media.length ? 'Adicionar outra imagem' : 'Escolher imagens'}
-                  icon="image"
-                  variant="outline"
-                  fullWidth
-                  onPress={chooseImages}
-                  disabled={media.length >= MAX_IMAGES}
-                  testID="choose-post-images"
-                />
-              </View>
-
-              <View style={styles.field}>
-                <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
                   Mensagem
                 </Text>
                 <TextInput
@@ -328,6 +290,63 @@ export function ComposePostModal({
                   accessibilityLabel="Conteúdo da publicação"
                 />
               </View>
+
+              {type === 'UPDATE' && (
+                <View style={styles.field}>
+                  <Text style={[styles.fieldLabel, { color: colors.foreground }]}>
+                    Imagens
+                  </Text>
+                  <Text style={[styles.mediaHint, { color: colors.mutedForeground }]}>
+                    Até 4 imagens. Cada arquivo é comprimido e deve ter no máximo 1,5 MB.
+                  </Text>
+                  {media.length > 0 && (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={styles.previewRow}>
+                        {media.map((item) => (
+                          <View key={item.clientMediaId} style={styles.preview}>
+                            <Image source={{ uri: item.thumbnailUri }} style={styles.previewImage} />
+                            <Pressable
+                              onPress={() =>
+                                setMedia((current) =>
+                                  current.filter(
+                                    (image) =>
+                                      image.clientMediaId !== item.clientMediaId,
+                                  ),
+                                )
+                              }
+                              style={[
+                                styles.removeImage,
+                                { backgroundColor: colors.card },
+                              ]}
+                              accessibilityLabel="Remover imagem"
+                              testID={`remove-image-${item.clientMediaId}`}
+                            >
+                              <Feather name="x" size={16} color={colors.destructive} />
+                            </Pressable>
+                          </View>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  )}
+                  {mediaError && (
+                    <Text
+                      style={[styles.mediaError, { color: colors.destructive }]}
+                      accessibilityRole="alert"
+                    >
+                      {mediaError}
+                    </Text>
+                  )}
+                  <Button
+                    title={media.length ? 'Adicionar outra imagem' : 'Escolher imagens'}
+                    icon="image"
+                    variant="outline"
+                    fullWidth
+                    onPress={chooseImages}
+                    disabled={media.length >= MAX_IMAGES}
+                    testID="choose-post-images"
+                  />
+                </View>
+              )}
 
               <Button
                 title="Salvar publicação"
