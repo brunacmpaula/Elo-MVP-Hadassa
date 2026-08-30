@@ -1,1 +1,2 @@
 - [OpenAPI Zod compatibility](openapi-zod-compatibility.md) — avoid generated Zod v4-only static helpers while this workspace remains on Zod 3.
+- [Live database schema validation](live-database-schema-validation.md) — validate the development database with read-only catalog queries; Drizzle migration checks do not inspect live tables.
