@@ -2,3 +2,4 @@
 - [Live database schema validation](live-database-schema-validation.md) — validate the development database with read-only catalog queries; Drizzle migration checks do not inspect live tables.
 - [Mobile safe-area regression](mobile-safe-area-regression.md) — keep geometry contracts and stable selectors until native screenshot runners are available.
 - [Expo stale preview process](expo-stale-preview-process.md) — if a restart prompts for another port, remove the orphaned Expo process before restarting again.
+- [Expo browser validation routing](expo-browser-validation-routing.md) — browser testers may hit the shared artifact route while appPreview correctly reaches Expo’s direct domain.

@@ -212,12 +212,12 @@ const screenScenarios = [
     source: sources.compose,
     rootTestId: 'compose-post-sheet',
     // The sheet is bottom-anchored. At its maximum height, its top starts
-    // after the 20% remaining viewport plus the internal top padding.
-    topClearance: (device) => device.height * 0.2 + 10,
+    // after the 8% remaining viewport plus the internal top padding.
+    topClearance: (device) => device.height * 0.08 + 10,
     bottomClearance: (device) => Math.max(device.insets.bottom, 20),
     required: [
       'useAppSafeAreaInsets',
-      "height: '80%'",
+      "height: '92%'",
       'paddingTop: 10',
       "paddingBottom: Math.max(insets.bottom, 20)",
       'testID="compose-post-sheet"',
