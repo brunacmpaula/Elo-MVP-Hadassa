@@ -10,7 +10,6 @@ import { Feather } from '@expo/vector-icons';
 import {
   AppSafeAreaView,
   useTabContentBottomPadding,
-  usesNativeTabs,
 } from './AppSafeAreaView';
 import { useFocusEffect } from 'expo-router';
 import { useAuth, type ProfileField } from '../context/AuthContext';
@@ -107,7 +106,6 @@ export function MissionaryProfile() {
   // The tab bar is absolute, so the fixed account action needs its own
   // calculated clearance above the tab bar and home indicator.
   const footerBottomPadding = useTabContentBottomPadding(90);
-  const nativeTabs = usesNativeTabs();
 
   const handleNotificationAudienceChange = async (enabled: boolean) => {
     setPrivacySaveError(null);
@@ -143,7 +141,9 @@ export function MissionaryProfile() {
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior={nativeTabs ? 'automatic' : 'never'}
+        // This scroll view ends above the in-flow footer; the footer owns the
+        // complete tab-bar clearance, so automatic adjustment would duplicate it.
+        contentInsetAdjustmentBehavior="never"
         contentContainerStyle={[styles.content, { paddingBottom: listBottomPadding }]}
       >
         <View style={styles.header}>

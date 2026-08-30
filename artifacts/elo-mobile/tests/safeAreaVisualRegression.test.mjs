@@ -71,10 +71,13 @@ const screenScenarios = [
   },
   {
     id: 'missionary-tabs',
+    tabbed: true,
     source: sources.missionaryHome,
     rootTestId: 'missionary-home-screen',
     topClearance: (device) => device.insets.top,
-    bottomClearance: (device) => tabContentBottomPadding(device.insets, false),
+    bottomClearance: (device, nativeTabs) =>
+      tabContentBottomPadding(device.insets, nativeTabs, 100, 'automatic') +
+      (nativeTabs ? device.insets.bottom : 0),
     required: [
       '<AppSafeAreaView',
       'edges={[' + "'top'" + ']}',
@@ -85,10 +88,13 @@ const screenScenarios = [
   },
   {
     id: 'supporter-tabs',
+    tabbed: true,
     source: sources.supporterHome,
     rootTestId: 'supporter-home-screen',
     topClearance: (device) => device.insets.top,
-    bottomClearance: (device) => tabContentBottomPadding(device.insets, false),
+    bottomClearance: (device, nativeTabs) =>
+      tabContentBottomPadding(device.insets, nativeTabs, 100, 'automatic') +
+      (nativeTabs ? device.insets.bottom : 0),
     required: [
       '<AppSafeAreaView',
       'edges={[' + "'top'" + ']}',
@@ -98,10 +104,13 @@ const screenScenarios = [
   },
   {
     id: 'explore-tab',
+    tabbed: true,
     source: sources.explore,
     rootTestId: 'explore-screen',
     topClearance: (device) => device.insets.top,
-    bottomClearance: (device) => tabContentBottomPadding(device.insets, false),
+    bottomClearance: (device, nativeTabs) =>
+      tabContentBottomPadding(device.insets, nativeTabs, 100, 'automatic') +
+      (nativeTabs ? device.insets.bottom : 0),
     required: [
       '<AppSafeAreaView',
       'edges={[' + "'top'" + ']}',
@@ -111,11 +120,14 @@ const screenScenarios = [
   },
   {
     id: 'sync-queue-tab',
+    tabbed: true,
     source: sources.queue,
     rootTestId: 'sync-queue-screen',
     topClearance: (device) => device.insets.top,
-    bottomClearance: (device) =>
-      Math.max(84, tabContentBottomPadding(device.insets, false) - 16),
+    bottomClearance: (device, nativeTabs) =>
+      nativeTabs
+        ? tabContentBottomPadding(device.insets, true, 90, 'never')
+        : Math.max(84, tabContentBottomPadding(device.insets, false) - 16),
     required: [
       '<AppSafeAreaView',
       'edges={[' + "'top'" + ']}',
@@ -127,10 +139,14 @@ const screenScenarios = [
   },
   {
     id: 'missionary-profile-tab',
+    tabbed: true,
     source: sources.missionaryProfile,
     rootTestId: 'missionary-profile-screen',
     topClearance: (device) => device.insets.top,
-    bottomClearance: (device) => tabContentBottomPadding(device.insets, false, 90),
+    bottomClearance: (device, nativeTabs) =>
+      nativeTabs
+        ? tabContentBottomPadding(device.insets, true, 90, 'never')
+        : tabContentBottomPadding(device.insets, false, 90),
     required: [
       '<AppSafeAreaView',
       'edges={[' + "'top'" + ']}',
@@ -141,10 +157,14 @@ const screenScenarios = [
   },
   {
     id: 'supporter-profile-tab',
+    tabbed: true,
     source: sources.supporterProfile,
     rootTestId: 'supporter-profile-screen',
     topClearance: (device) => device.insets.top,
-    bottomClearance: (device) => tabContentBottomPadding(device.insets, false, 90),
+    bottomClearance: (device, nativeTabs) =>
+      nativeTabs
+        ? tabContentBottomPadding(device.insets, true, 90, 'never')
+        : tabContentBottomPadding(device.insets, false, 90),
     required: [
       '<AppSafeAreaView',
       'edges={[' + "'top'" + ']}',
@@ -198,9 +218,22 @@ const screenScenarios = [
   },
 ];
 
-function tabContentBottomPadding(insets, nativeTabs, minimum = 100) {
-  if (nativeTabs) return 16;
-  return Math.max(minimum, insets.bottom + 84);
+const CLASSIC_TAB_BAR_CLEARANCE = 84;
+const NATIVE_TAB_BAR_HEIGHT = 50;
+
+function tabContentBottomPadding(
+  insets,
+  nativeTabs,
+  minimum = 100,
+  contentInsetAdjustmentBehavior = 'never',
+) {
+  if (nativeTabs) {
+    if (contentInsetAdjustmentBehavior === 'automatic') {
+      return NATIVE_TAB_BAR_HEIGHT;
+    }
+    return Math.max(minimum, insets.bottom + NATIVE_TAB_BAR_HEIGHT);
+  }
+  return Math.max(minimum, insets.bottom + CLASSIC_TAB_BAR_CLEARANCE);
 }
 
 function safeFrame(device) {
@@ -278,22 +311,51 @@ test('keeps both tab-bar modes safe on iPhone, Android and web', () => {
   assert.match(sources.tabsLayout, /\.\.\.\(isWeb \? \{ height: 84 \} : \{\}\)/);
   assert.match(sources.tabsLayout, /<NativeTabs>/);
   assert.match(sources.tabsLayout, /return <ClassicTabLayout \/>/);
+  assert.match(sources.safeArea, /NATIVE_TAB_BAR_HEIGHT = 50/);
+  assert.match(sources.safeArea, /contentInsetAdjustmentBehavior: 'automatic' \| 'never'/);
+  assert.match(sources.safeArea, /return NATIVE_TAB_BAR_HEIGHT/);
+  assert.match(sources.safeArea, /bottom \+ NATIVE_TAB_BAR_HEIGHT/);
 
   for (const device of devices) {
     const frame = safeFrame(device);
     const classicContentClearance = tabContentBottomPadding(device.insets, false);
-    const nativeContentClearance = tabContentBottomPadding(device.insets, true);
 
     assert.ok(
       classicContentClearance >= device.insets.bottom + 84,
       `${device.id}: classic tab content must clear the tab bar and bottom inset`,
     );
-    assert.ok(
-      nativeContentClearance >= 16,
-      `${device.id}: native tab content must not end inside the native tab bar`,
-    );
     assert.ok(frame.top >= device.insets.top);
     assert.ok(frame.bottom <= device.height - device.insets.bottom);
+
+    if (device.id.startsWith('iphone')) {
+      const nativeScrollPadding = tabContentBottomPadding(
+        device.insets,
+        true,
+        100,
+        'automatic',
+      );
+      const nativeFixedPadding = tabContentBottomPadding(
+        device.insets,
+        true,
+        90,
+        'never',
+      );
+      const nativeFullClearance = device.insets.bottom + NATIVE_TAB_BAR_HEIGHT;
+
+      assert.equal(
+        nativeScrollPadding,
+        NATIVE_TAB_BAR_HEIGHT,
+        `${device.id}: automatic native scroll padding must exclude the already-applied bottom inset`,
+      );
+      assert.ok(
+        nativeScrollPadding + device.insets.bottom >= nativeFullClearance,
+        `${device.id}: native scroll content must clear the full tab bar`,
+      );
+      assert.ok(
+        nativeFixedPadding >= nativeFullClearance,
+        `${device.id}: fixed native-tab actions must clear the tab bar and home indicator`,
+      );
+    }
   }
 });
 
@@ -309,20 +371,31 @@ for (const scenario of screenScenarios) {
     for (const device of devices) {
       const frame = safeFrame(device);
       const topClearance = scenario.topClearance(device);
-      const bottomClearance = scenario.bottomClearance(device);
+      const nativeTabModes =
+        scenario.tabbed && device.id.startsWith('iphone') ? [false, true] : [false];
 
-      assert.ok(
-        topClearance >= frame.top,
-        `${scenario.id}/${device.id}: top controls can overlap the status bar or notch`,
-      );
-      assert.ok(
-        bottomClearance >= device.insets.bottom,
-        `${scenario.id}/${device.id}: bottom controls can overlap the home indicator`,
-      );
-      assert.ok(
-        scenario.rootTestId.length > 0,
-        `${scenario.id}: every visual scenario needs a stable root selector`,
-      );
+      for (const nativeTabs of nativeTabModes) {
+        const bottomClearance = scenario.bottomClearance(device, nativeTabs);
+
+        assert.ok(
+          topClearance >= frame.top,
+          `${scenario.id}/${device.id}: top controls can overlap the status bar or notch`,
+        );
+        assert.ok(
+          bottomClearance >= device.insets.bottom,
+          `${scenario.id}/${device.id}/${nativeTabs ? 'native' : 'classic'}: bottom controls can overlap the home indicator`,
+        );
+        if (nativeTabs) {
+          assert.ok(
+            bottomClearance >= device.insets.bottom + NATIVE_TAB_BAR_HEIGHT,
+            `${scenario.id}/${device.id}/native: bottom controls can overlap the native tab bar`,
+          );
+        }
+        assert.ok(
+          scenario.rootTestId.length > 0,
+          `${scenario.id}: every visual scenario needs a stable root selector`,
+        );
+      }
     }
   });
 }

@@ -23,10 +23,11 @@ export default function SyncQueueScreen() {
     setSyncOnlyOnWifi,
   } = useSync();
   const colors = useColors();
-  const listBottomPadding = useTabContentBottomPadding();
+  const listBottomPadding = useTabContentBottomPadding(100, 'automatic');
   const nativeTabs = usesNativeTabs();
+  const fixedBottomPadding = useTabContentBottomPadding(90);
   const footerBottomPadding = nativeTabs
-    ? 24
+    ? fixedBottomPadding
     : Math.max(84, listBottomPadding - 16);
 
   return (

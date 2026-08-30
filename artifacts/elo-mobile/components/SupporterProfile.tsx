@@ -24,7 +24,10 @@ export function SupporterProfile() {
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}>
+      <ScrollView
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]}
+      >
         <Text style={[styles.kicker, { color: colors.accent }]}>MINHA CONTA</Text>
         <Text style={[styles.title, { color: colors.foreground }]}>Perfil do Apoiador</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>

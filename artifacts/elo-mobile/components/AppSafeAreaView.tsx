@@ -8,6 +8,10 @@ import {
 
 const WEB_TOP_INSET = 67;
 const WEB_BOTTOM_INSET = 34;
+const CLASSIC_TAB_BAR_CLEARANCE = 84;
+// NativeTabs' visible tab controls occupy this height above the device inset.
+// Scroll views using automatic adjustment receive the bottom inset from iOS.
+const NATIVE_TAB_BAR_HEIGHT = 50;
 
 type AppSafeAreaViewProps = React.ComponentProps<typeof SafeAreaView>;
 
@@ -69,15 +73,27 @@ export function usesNativeTabs() {
   return Platform.OS === 'ios' && isLiquidGlassAvailable();
 }
 
-export function useTabContentBottomPadding(minimum = 100) {
+export function useTabContentBottomPadding(
+  minimum = 100,
+  contentInsetAdjustmentBehavior: 'automatic' | 'never' = 'never',
+) {
   const { bottom } = useAppSafeAreaInsets();
 
-  // NativeTabs applies the bottom inset and tab-bar area automatically.
+  // NativeTabs applies the device bottom inset automatically only when the
+  // scroll view opts into automatic adjustment. Reserve the visible tab
+  // controls here without adding the home indicator a second time.
   if (usesNativeTabs()) {
-    return 16;
+    if (contentInsetAdjustmentBehavior === 'automatic') {
+      return NATIVE_TAB_BAR_HEIGHT;
+    }
+
+    // Fixed footers and manually adjusted content need both pieces of the
+    // native tab-bar clearance because they are outside that scroll-view
+    // adjustment.
+    return Math.max(minimum, bottom + NATIVE_TAB_BAR_HEIGHT);
   }
 
   // Classic Tabs are absolute, so leave enough room for the bar and the
   // device home/navigation indicator without relying on a fixed device inset.
-  return Math.max(minimum, bottom + 84);
+  return Math.max(minimum, bottom + CLASSIC_TAB_BAR_CLEARANCE);
 }

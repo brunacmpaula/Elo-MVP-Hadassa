@@ -20,7 +20,7 @@ import {
 
 export default function ExploreScreen() {
   const colors = useColors();
-  const listBottomPadding = useTabContentBottomPadding();
+  const listBottomPadding = useTabContentBottomPadding(100, 'automatic');
   const nativeTabs = usesNativeTabs();
   const {
     data: missionaries,

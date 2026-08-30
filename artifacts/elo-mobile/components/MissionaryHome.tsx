@@ -17,7 +17,7 @@ import { formatPendingBytes } from '../context/syncState';
 
 export function MissionaryHome() {
   const colors = useColors();
-  const listBottomPadding = useTabContentBottomPadding();
+  const listBottomPadding = useTabContentBottomPadding(100, 'automatic');
   const nativeTabs = usesNativeTabs();
   const { data: serverPosts, isLoading, refetch } = useListPosts({ mine: true });
   const { localPosts, isSyncing, syncNow, queue, queueSummary, syncStatus } = useSync();

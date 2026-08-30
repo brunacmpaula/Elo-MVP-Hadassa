@@ -19,7 +19,7 @@ import {
 
 export function SupporterHome() {
   const colors = useColors();
-  const listBottomPadding = useTabContentBottomPadding();
+  const listBottomPadding = useTabContentBottomPadding(100, 'automatic');
   const nativeTabs = usesNativeTabs();
   const {
     data: posts,
