@@ -48,7 +48,7 @@ export function SupporterHome() {
       edges={['top']}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.foreground }]}>Para Você</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Feed</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           Acompanhe e ore pelos missionários.
         </Text>
