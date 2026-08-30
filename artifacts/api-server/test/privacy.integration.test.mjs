@@ -255,6 +255,11 @@ test("preferences persist and redact public profile data", async (t) => {
     });
     assert.equal(ownerCreate.response.status, 201);
     assert.equal(ownerCreate.body.missionaryId, "missionary-ana");
+    assert.deepEqual(
+      ownerCreate.body.media,
+      [],
+      "a publication saved without images must return an empty media payload",
+    );
 
     const saveMissionary = await jsonRequest(
       "/missionaries/missionary-lucia/follow",

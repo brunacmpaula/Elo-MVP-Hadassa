@@ -570,6 +570,34 @@ test('keeps compose message before update-only images and clears hidden media', 
   );
 });
 
+test('keeps native image selection capped at four with visible previews', () => {
+  assert.match(
+    sources.compose,
+    /const MAX_IMAGES = 4;/,
+    'the composer must keep the four-image product limit',
+  );
+  assert.match(
+    sources.compose,
+    /allowsMultipleSelection: true,\s*selectionLimit: MAX_IMAGES - media\.length,/,
+    'the native picker must allow multiple images but only the remaining slots',
+  );
+  assert.match(
+    sources.compose,
+    /setMedia\(\(current\) => \[\.\.\.current, \.\.\.prepared\]\.slice\(0, MAX_IMAGES\)\)/,
+    'picker results must never append more than four images',
+  );
+  assert.match(
+    sources.compose,
+    /<Image source=\{\{ uri: item\.thumbnailUri \}\} style=\{styles\.previewImage\} \/>/,
+    'each selected image must render a visible preview',
+  );
+  assert.match(
+    sources.compose,
+    /disabled=\{media\.length >= MAX_IMAGES\}/,
+    'the picker button must be disabled once four images are selected',
+  );
+});
+
 for (const scenario of screenScenarios) {
   test(`visual contract: ${scenario.id} keeps controls inside the safe frame`, () => {
     for (const requiredFragment of scenario.required) {
