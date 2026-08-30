@@ -45,6 +45,7 @@ export default function LoginScreen() {
           
           <Button
             title="Sou Missionário"
+            accessibilityLabel="Entrar como missionário"
             icon="send"
             fullWidth
             onPress={() => loginAs('MISSIONARY')}
@@ -53,6 +54,7 @@ export default function LoginScreen() {
           
           <Button
             title="Sou Apoiador"
+            accessibilityLabel="Entrar como apoiador"
             icon="heart"
             variant="outline"
             fullWidth

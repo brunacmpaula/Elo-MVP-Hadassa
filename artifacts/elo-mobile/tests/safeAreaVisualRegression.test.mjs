@@ -16,6 +16,7 @@ const sources = {
   tabsLayout: source('app/(tabs)/_layout.tsx'),
   safeArea: source('components/AppSafeAreaView.tsx'),
   login: source('app/index.tsx'),
+  button: source('components/Button.tsx'),
   missionaryHome: source('components/MissionaryHome.tsx'),
   supporterHome: source('components/SupporterHome.tsx'),
   explore: source('app/(tabs)/explore.tsx'),
@@ -225,6 +226,50 @@ test('keeps the login brand text-only while preserving its entry controls', () =
   assert.match(sources.login, /Mesmo longe, juntos na missão\./);
   assert.match(sources.login, /testID="login-as-missionary"/);
   assert.match(sources.login, /testID="login-as-supporter"/);
+});
+
+test('keeps login actions accessible, distinct, and actionable', () => {
+  const loginActions = [
+    {
+      testID: 'login-as-missionary',
+      title: 'Sou Missionário',
+      accessibilityLabel: 'Entrar como missionário',
+      role: 'MISSIONARY',
+    },
+    {
+      testID: 'login-as-supporter',
+      title: 'Sou Apoiador',
+      accessibilityLabel: 'Entrar como apoiador',
+      role: 'SUPPORTER',
+    },
+  ];
+
+  assert.match(sources.button, /accessibilityRole="button"/);
+  assert.match(sources.button, /accessibilityLabel=\{accessibilityLabel \|\| title\}/);
+  assert.match(sources.button, /<Pressable[\s\S]*onPress=\{handlePress\}/);
+  assert.match(sources.button, /disabled=\{disabled \|\| loading\}/);
+
+  const accessibleNames = new Set();
+  for (const action of loginActions) {
+    const buttonSource = sources.login.match(
+      new RegExp(`<Button\\s[\\s\\S]*?testID="${action.testID}"[\\s\\S]*?\/>`),
+    )?.[0];
+
+    assert.ok(buttonSource, `${action.testID}: login control must use the shared Button`);
+    assert.match(buttonSource, new RegExp(`title="${action.title}"`));
+    assert.match(buttonSource, new RegExp(`accessibilityLabel="${action.accessibilityLabel}"`));
+    assert.match(buttonSource, new RegExp(`onPress=\\{\\(\\) => loginAs\\('${action.role}'\\)\\}`));
+    assert.match(buttonSource, new RegExp(`testID="${action.testID}"`));
+
+    assert.ok(action.accessibilityLabel.trim().length > 0);
+    accessibleNames.add(action.accessibilityLabel);
+  }
+
+  assert.equal(
+    accessibleNames.size,
+    loginActions.length,
+    'login actions must have distinguishable accessible names',
+  );
 });
 
 test('keeps both tab-bar modes safe on iPhone, Android and web', () => {
