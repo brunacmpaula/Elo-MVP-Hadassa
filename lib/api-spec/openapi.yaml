@@ -10,6 +10,16 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Demo authentication and session context
+  - name: missionaries
+    description: Missionary discovery and follows
+  - name: posts
+    description: Missionary content
+  - name: prayers
+    description: Prayer commitments
+  - name: sync
+    description: Offline operation synchronization
 paths:
   /healthz:
     get:
@@ -24,7 +34,217 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Start a demo session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Signed-in user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+  /missionaries:
+    get:
+      operationId: listMissionaries
+      tags: [missionaries]
+      summary: List missionaries available to supporters
+      responses:
+        "200":
+          description: Missionaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Missionary"
+  /missionaries/{missionaryId}:
+    get:
+      operationId: getMissionary
+      tags: [missionaries]
+      summary: Get a missionary profile with posts
+      parameters:
+        - $ref: "#/components/parameters/MissionaryId"
+      responses:
+        "200":
+          description: Missionary profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MissionaryProfile"
+        "404":
+          description: Not found
+  /missionaries/{missionaryId}/follow:
+    post:
+      operationId: followMissionary
+      tags: [missionaries]
+      summary: Follow a missionary
+      parameters:
+        - $ref: "#/components/parameters/MissionaryId"
+      responses:
+        "200":
+          description: Follow state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowState"
+    delete:
+      operationId: unfollowMissionary
+      tags: [missionaries]
+      summary: Stop following a missionary
+      parameters:
+        - $ref: "#/components/parameters/MissionaryId"
+      responses:
+        "200":
+          description: Follow state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowState"
+  /posts:
+    get:
+      operationId: listPosts
+      tags: [posts]
+      summary: List posts visible to the current user
+      parameters:
+        - in: query
+          name: missionaryId
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: mine
+          schema:
+            type: boolean
+          required: false
+      responses:
+        "200":
+          description: Posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+    post:
+      operationId: createPost
+      tags: [posts]
+      summary: Create a missionary post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostInput"
+      responses:
+        "201":
+          description: Created post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+  /posts/{postId}:
+    get:
+      operationId: getPost
+      tags: [posts]
+      summary: Get a post
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "200":
+          description: Post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "404":
+          description: Not found
+    patch:
+      operationId: updatePost
+      tags: [posts]
+      summary: Edit a missionary post
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostUpdate"
+      responses:
+        "200":
+          description: Updated post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+  /posts/{postId}/prayers:
+    post:
+      operationId: prayForPost
+      tags: [prayers]
+      summary: Mark that the supporter is praying
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "200":
+          description: Prayer state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrayerState"
+    delete:
+      operationId: removePrayer
+      tags: [prayers]
+      summary: Remove a prayer commitment
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "200":
+          description: Prayer state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrayerState"
+  /sync:
+    post:
+      operationId: syncOperations
+      tags: [sync]
+      summary: Process idempotent offline operations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncInput"
+      responses:
+        "200":
+          description: Sync acknowledgements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResult"
 components:
+  parameters:
+    MissionaryId:
+      name: missionaryId
+      in: path
+      required: true
+      schema:
+        type: string
+    PostId:
+      name: postId
+      in: path
+      required: true
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +253,141 @@ components:
           type: string
       required:
         - status
-
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 1
+    User:
+      type: object
+      required: [id, name, email, role]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        role:
+          type: string
+          enum: [MISSIONARY, SUPPORTER]
+    Session:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+    Missionary:
+      type: object
+      required: [id, userId, name, bio, country, initials, isFollowed]
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        name: { type: string }
+        bio: { type: string }
+        country: { type: string }
+        initials: { type: string }
+        isFollowed: { type: boolean }
+        latestPostType:
+          type: ["string", "null"]
+          enum: [UPDATE, PRAYER_REQUEST, NEED, null]
+    MissionaryProfile:
+      allOf:
+        - $ref: "#/components/schemas/Missionary"
+        - type: object
+          required: [posts]
+          properties:
+            posts:
+              type: array
+              items:
+                $ref: "#/components/schemas/Post"
+    Post:
+      type: object
+      required: [id, missionaryId, missionaryName, missionaryCountry, type, title, content, status, createdAt, updatedAt, prayerCount, prayedByMe]
+      properties:
+        id: { type: string }
+        missionaryId: { type: string }
+        missionaryName: { type: string }
+        missionaryCountry: { type: string }
+        type:
+          type: string
+          enum: [UPDATE, PRAYER_REQUEST, NEED]
+        title: { type: string }
+        content: { type: string }
+        status:
+          type: string
+          enum: [DRAFT, PENDING_SYNC, PUBLISHED, SYNC_FAILED]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        prayerCount: { type: number, minimum: 0 }
+        prayedByMe: { type: boolean }
+    PostInput:
+      type: object
+      required: [missionaryId, type, title, content, clientOperationId]
+      properties:
+        missionaryId: { type: string }
+        type:
+          type: string
+          enum: [UPDATE, PRAYER_REQUEST, NEED]
+        title: { type: string, minLength: 1 }
+        content: { type: string, minLength: 1 }
+        clientOperationId: { type: string, minLength: 1 }
+    PostUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1 }
+        content: { type: string, minLength: 1 }
+    FollowState:
+      type: object
+      required: [missionaryId, isFollowed]
+      properties:
+        missionaryId: { type: string }
+        isFollowed: { type: boolean }
+    PrayerState:
+      type: object
+      required: [postId, prayedByMe, prayerCount]
+      properties:
+        postId: { type: string }
+        prayedByMe: { type: boolean }
+        prayerCount: { type: number, minimum: 0 }
+    SyncOperation:
+      type: object
+      required: [operationId, entityType, entityId, operationType, payload]
+      properties:
+        operationId: { type: string }
+        entityType: { type: string, enum: [POST] }
+        entityId: { type: string }
+        operationType: { type: string, enum: [CREATE, UPDATE] }
+        payload:
+          type: object
+          additionalProperties: true
+    SyncInput:
+      type: object
+      required: [operations]
+      properties:
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncOperation"
+    SyncAck:
+      type: object
+      required: [operationId, status, entityId]
+      properties:
+        operationId: { type: string }
+        status:
+          type: string
+          enum: [SYNCED, FAILED]
+        entityId: { type: string }
+        error:
+          type: ["string", "null"]
+    SyncResult:
+      type: object
+      required: [acks]
+      properties:
+        acks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncAck"

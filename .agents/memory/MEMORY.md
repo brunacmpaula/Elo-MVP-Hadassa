@@ -1,0 +1,1 @@
+- [OpenAPI Zod compatibility](openapi-zod-compatibility.md) — avoid generated Zod v4-only static helpers while this workspace remains on Zod 3.

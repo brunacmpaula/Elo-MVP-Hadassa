@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/elo-mobile/"
+title = "Elo — Mesmo longe, juntos na missão"
+description = "Aplicativo mobile offline-first que conecta missionários e apoiadores. Missionários podem registrar atualizações, pedidos de oração e necessidades mesmo sem internet; apoiadores descobrem, acompanham e oram por eles."
+version = "1.0.0"
+id = "artifacts/elo-mobile"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/elo-mobile/" ]
+localPort = 22740
+
+[services.development]
+run = "pnpm --filter @workspace/elo-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/elo-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/elo-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "22740"
+BASE_PATH = "/elo-mobile/"

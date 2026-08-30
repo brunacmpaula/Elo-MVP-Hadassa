@@ -1,0 +1,604 @@
+Construir o MVP do aplicativo "Elo"
+Quero que você construa um MVP funcional de um aplicativo mobile chamado Elo.
+1. Conceito
+O Elo conecta missionários e apoiadores, permitindo que missionários compartilhem atualizações, pedidos de oração e necessidades com pessoas que desejam acompanhar e participar de sua missão.
+O conceito central é:
+"Mesmo longe, juntos na missão."
+O principal diferencial técnico do aplicativo é ser offline-first, especialmente para a experiência do missionário.
+O missionário pode estar em uma região com internet limitada ou completamente sem conexão e ainda deve conseguir usar as principais funcionalidades do aplicativo. Os dados devem ser armazenados localmente e sincronizados automaticamente quando a conexão retornar.
+
+2. Escopo do MVP
+Não implemente funcionalidades além das descritas abaixo.
+O MVP possui dois tipos principais de experiência:
+Missionário
+Pode:
+	•	visualizar seu perfil;
+	•	publicar atualizações;
+	•	criar pedidos de oração;
+	•	criar necessidades;
+	•	visualizar seus conteúdos;
+	•	editar conteúdos;
+	•	usar o aplicativo offline;
+	•	visualizar o status de sincronização.
+Apoiador
+Pode:
+	•	criar perfil;
+	•	descobrir missionários;
+	•	visualizar perfil de missionários;
+	•	seguir/deixar de seguir missionários;
+	•	visualizar atualizações;
+	•	visualizar pedidos de oração;
+	•	visualizar necessidades;
+	•	marcar "Estou orando";
+	•	visualizar quais missionários acompanha.
+Não implemente neste MVP:
+	•	pagamentos reais;
+	•	PIX;
+	•	chat;
+	•	mensagens privadas;
+	•	sistema de organizações;
+	•	dashboard administrativo;
+	•	mapa;
+	•	gamificação;
+	•	vídeos;
+	•	IA;
+	•	sistema complexo de notificações;
+	•	microservices;
+	•	funcionalidades de rede social além das descritas.
+
+3. Stack obrigatória
+Mobile
+Use:
+	•	React Native
+	•	TypeScript
+	•	Expo
+	•	Expo Router
+	•	SQLite para persistência local
+	•	Zustand para estado local
+	•	TanStack Query para gerenciamento de estado de servidor
+	•	React Native Testing Library para testes
+Backend
+Use:
+	•	Python
+	•	FastAPI
+	•	Pydantic
+	•	SQLAlchemy 2.x
+	•	Alembic
+Banco
+	•	PostgreSQL
+Infraestrutura
+	•	Docker
+	•	Docker Compose
+	•	GitHub Actions, se fizer sentido para o projeto
+Não utilize microservices. O backend deve ser um modular monolith.
+
+4. Arquitetura do mobile
+O aplicativo deve seguir arquitetura offline-first.
+A internet não deve ser considerada requisito para as funcionalidades principais do missionário.
+Use:
+React Native
+     │
+     ▼
+Presentation
+     │
+     ▼
+Application / Services
+     │
+     ▼
+Repositories
+     │
+     ├───────────────┐
+     ▼               ▼
+SQLite          Remote API
+     │               │
+     └───────┬───────┘
+             ▼
+       Sync Engine
+O SQLite deve ser a fonte local para os dados necessários à experiência offline.
+Crie uma fila de sincronização, por exemplo:
+sync_operations
+Cada operação deve possuir um identificador único para permitir operações idempotentes.
+Exemplo:
+operation_id
+entity_type
+entity_id
+operation_type
+payload
+created_at
+status
+retry_count
+
+5. Comportamento offline
+Este é um requisito fundamental.
+Quando o missionário estiver offline:
+Criar atualização
+Deve ser possível criar uma atualização normalmente.
+O aplicativo deve:
+	1	salvar a atualização no SQLite;
+	2	adicionar uma operação na fila de sincronização;
+	3	mostrar que a atualização está pendente;
+	4	não exibir erro simplesmente porque não existe internet.
+Exemplo de estado:
+📴 Salvo no dispositivo Será sincronizado quando a conexão estiver disponível.
+Quando a conexão voltar:
+Offline
+   ↓
+Internet disponível
+   ↓
+Sync Engine
+   ↓
+Enviar operações pendentes
+   ↓
+Servidor confirma
+   ↓
+Marcar como sincronizado
+A sincronização deve possuir:
+	•	retry;
+	•	idempotência;
+	•	tratamento de falhas;
+	•	estados pending, syncing, synced e failed.
+Se uma operação falhar, ela não deve ser perdida.
+
+6. O que deve funcionar offline
+Para o missionário:
+Deve funcionar offline:
+	•	abrir seu perfil;
+	•	visualizar seus conteúdos já sincronizados;
+	•	criar atualização;
+	•	criar pedido de oração;
+	•	criar necessidade;
+	•	editar conteúdos já existentes;
+	•	visualizar fila de sincronização.
+Pode depender de internet:
+	•	descobrir novos missionários;
+	•	seguir novos missionários;
+	•	receber conteúdo novo;
+	•	sincronizar;
+	•	login inicial.
+O aplicativo deve deixar claro quando está offline, mas sem tornar a experiência frustrante.
+
+7. Usuários
+Existem dois tipos de experiência:
+MISSIONARY
+SUPPORTER
+No login, o usuário possui uma experiência correspondente.
+Porém, estruture o modelo de usuário de forma que futuramente uma mesma pessoa possa exercer os dois papéis. 
+Importante: o missionário não poderá se cadastrar, ele será cadastrado por uma igreja na plataforma para aumentar a credibilidade
+Não crie dois aplicativos diferentes.
+É um único aplicativo React Native com experiências diferentes.
+
+8. Modelo de dados
+Implemente inicialmente as seguintes entidades.
+User
+id
+name
+email
+role
+created_at
+updated_at
+
+Missionary
+id
+user_id
+bio
+country
+created_at
+updated_at
+
+Follow
+id
+missionary_id
+supporter_id
+created_at
+
+Post
+Use uma entidade única para os conteúdos do missionário.
+id
+missionary_id
+type
+title
+content
+status
+created_at
+updated_at
+type:
+UPDATE
+PRAYER_REQUEST
+NEED
+status:
+DRAFT
+PENDING_SYNC
+PUBLISHED
+SYNC_FAILED
+
+Prayer
+id
+post_id
+supporter_id
+created_at
+
+9. Backend
+Organize o backend como modular monolith:
+backend/
+  app/
+    main.py
+
+    core/
+      config.py
+      database.py
+      security.py
+
+    modules/
+      users/
+      missionaries/
+      follows/
+      posts/
+      prayers/
+      sync/
+
+    shared/
+      exceptions/
+      dependencies/
+
+  tests/
+
+  alembic/
+  Dockerfile
+  pyproject.toml
+Cada módulo deve possuir, quando necessário:
+router.py
+service.py
+repository.py
+models.py
+schemas.py
+Separe:
+	•	HTTP;
+	•	regras de negócio;
+	•	persistência;
+	•	schemas;
+	•	infraestrutura.
+
+10. API
+Implemente uma API REST simples.
+Exemplos:
+POST   /auth/login
+
+GET    /missionaries
+GET    /missionaries/{id}
+
+POST   /missionaries/{id}/follow
+DELETE /missionaries/{id}/follow
+
+GET    /posts
+GET    /posts/{id}
+
+POST   /posts
+PATCH  /posts/{id}
+
+POST   /posts/{id}/prayers
+DELETE /posts/{id}/prayers
+
+POST   /sync
+A API deve ser preparada para receber operações idempotentes provenientes do mobile.
+Não crie endpoints desnecessários.
+
+11. Telas
+Construa aproximadamente estas telas.
+Comuns
+Splash
+Logo Elo.
+Login
+Elo
+
+Email
+Senha
+
+[ Entrar ]
+
+[ Criar conta ]
+Escolha de experiência
+Para o MVP, após cadastro:
+Como você participa da missão?
+
+[ Sou missionário ]
+
+[ Sou apoiador ]
+
+12. Experiência do apoiador
+Home
+Mostrar os missionários que a pessoa acompanha.
+Exemplo:
+Olá 👋
+
+Seus missionários
+
+Ana Silva
+🇲🇿 Moçambique
+
+Nova atualização
+
+João Santos
+🇧🇷 Brasil
+
+Novo pedido de oração
+
+[ Descobrir missionários ]
+Explorar missionários
+Lista simples de missionários.
+Cada card deve apresentar:
+	•	foto/avatar;
+	•	nome;
+	•	país;
+	•	pequena descrição;
+	•	botão para visualizar.
+Perfil do missionário
+Mostrar:
+	•	nome;
+	•	país;
+	•	bio;
+	•	botão seguir;
+	•	atualizações;
+	•	pedidos de oração;
+	•	necessidades.
+Detalhes do post
+Mostrar conteúdo completo.
+Para pedido de oração:
+🙏 Pedido de oração
+
+"Ore pela nossa equipe
+durante esta semana."
+
+Ana Silva
+🇲🇿 Moçambique
+
+42 pessoas estão orando
+
+[ 🙏 Estou orando ]
+Depois de clicar:
+🙏 Você está orando por Ana.
+
+13. Experiência do missionário
+Home
+Mostrar:
+Olá, Ana 👋
+
+Status
+🟢 Sincronizado
+
+ou
+
+📴 Offline
+2 itens aguardando sincronização
+
+
+────────────────
+
+Minhas publicações
+
+Atualizações
+Pedidos de oração
+Necessidades
+
+[ + Nova publicação ]
+
+
+Criar publicação
+Permitir selecionar:
+O que você deseja compartilhar?
+
+[ 📖 Atualização ]
+
+[ 🙏 Pedido de oração ]
+
+[ 📦 Necessidade ]
+Depois:
+Título
+[                    ]
+
+Conteúdo
+[                    ]
+
+[ Salvar ]
+Se estiver offline:
+📴 Sem conexão
+
+Sua publicação foi salva
+no dispositivo e será
+sincronizada depois.
+
+[ OK ]
+Minhas publicações
+Listar:
+📖 Atualização
+🟢 Publicada
+
+🙏 Pedido de oração
+🟡 Aguardando sincronização
+
+📦 Necessidade
+🟢 Publicada
+
+14. Design
+O aplicativo deve ser:
+	•	simples;
+	•	bonito;
+	•	moderno;
+	•	acolhedor;
+	•	humano;
+	•	minimalista.
+Não quero aparência de sistema administrativo.
+Quero uma experiência que transmita:
+	•	proximidade;
+	•	esperança;
+	•	comunidade;
+	•	simplicidade.
+Use bastante espaço em branco.
+Use as cores branco, verde, bege e alguns detalhes em vinho
+Cards simples.
+Tipografia legível.
+Hierarquia visual clara.
+Evite excesso de elementos e de textos
+
+15. Acessibilidade básica
+Mesmo não sendo o foco principal do MVP, implemente boas práticas:
+	•	labels acessíveis;
+	•	suporte a leitor de tela;
+	•	contraste adequado;
+	•	áreas de toque grandes;
+	•	tamanho de fonte respeitado;
+	•	não depender somente de cores para indicar estados;
+	•	suporte a Dynamic Type quando possível.
+
+16. Estados de conectividade
+Crie um componente global simples para indicar que seja sincronizado automaticamente se o aplicativo tiver conexão com a internet
+Online
+🟢 Sincronizado
+Offline
+📴 Você está offline
+Sincronizando
+🔄 Sincronizando...
+Falha
+⚠️ 2 itens não foram sincronizados
+
+[ Tentar novamente ]
+Esse componente é importante porque o estado de sincronização é parte central da experiência.
+
+17. Design da sincronização
+Implemente a sincronização de maneira confiável.
+Exemplo:
+User creates post
+        ↓
+SQLite transaction
+        ↓
+Post saved locally
+        ↓
+Sync operation created
+        ↓
+UI shows PENDING_SYNC
+        ↓
+Connectivity restored
+        ↓
+Sync engine runs
+        ↓
+POST /sync
+        ↓
+Backend processes operation
+        ↓
+Backend returns ACK
+        ↓
+Local record becomes PUBLISHED
+        ↓
+Sync operation becomes SYNCED
+Nunca remova uma operação da fila antes de receber confirmação do servidor.
+
+18. Demonstração principal do MVP
+O aplicativo precisa permitir esta demonstração:
+Passo 1
+Entrar como missionário.
+Passo 2
+Ativar modo avião.
+Passo 3
+Criar:
+"Ore pela nossa equipe esta semana."
+Passo 4
+Salvar.
+Mostrar:
+📴 Salvo no dispositivo.
+Passo 5
+Desativar modo avião.
+Passo 6
+Mostrar:
+🔄 Sincronizando...
+Depois:
+✓ Publicado.
+Passo 7
+Entrar como apoiador.
+O novo pedido deve aparecer.
+Passo 8
+Apoiador toca:
+🙏 Estou orando.
+Passo 9
+O missionário recebe a informação depois da sincronização.
+Essa deve ser a principal experiência demonstrável do MVP.
+
+19. Qualidade do código
+Quero código:
+	•	tipado;
+	•	modular;
+	•	legível;
+	•	testável;
+	•	com responsabilidades bem separadas.
+Evite:
+	•	componentes gigantes;
+	•	lógica de negócio dentro das telas;
+	•	chamadas HTTP diretamente nos componentes;
+	•	acesso direto ao banco dentro da UI;
+	•	duplicação;
+	•	abstrações desnecessárias.
+
+20. Testes
+Implemente testes para as partes mais importantes.
+Backend
+Testar:
+	•	criação de publicação;
+	•	criação de pedido de oração;
+	•	follow;
+	•	autorização;
+	•	sincronização idempotente.
+Mobile
+Testar:
+	•	criação de publicação offline;
+	•	publicação entrando na fila;
+	•	sincronização após recuperar conexão;
+	•	mudança de estado pending → syncing → synced;
+	•	falha e retry;
+	•	interação "Estou orando".
+O fluxo offline deve ter testes automatizados.
+
+21. Docker
+Crie:
+docker-compose.yml
+com pelo menos:
+backend
+postgres
+O projeto deve poder ser iniciado com:
+docker compose up
+O backend deve possuir documentação Swagger/OpenAPI.
+
+22. README
+Crie um README explicando:
+	•	problema;
+	•	solução;
+	•	proposta do Elo;
+	•	principais funcionalidades;
+	•	arquitetura;
+	•	offline-first;
+	•	sincronização;
+	•	stack;
+	•	como executar;
+	•	como executar os testes;
+	•	decisões arquiteturais;
+	•	limitações do MVP;
+	•	roadmap futuro.
+Inclua um diagrama simples da arquitetura.
+
+23. Prioridade
+Se precisar escolher entre funcionalidades, siga esta ordem:
+Prioridade 1
+Offline-first e sincronização confiável.
+Prioridade 2
+Fluxo Missionário → publicação → sincronização → Apoiador.
+Prioridade 3
+Pedidos de oração.
+Prioridade 4
+Seguir missionários.
+Prioridade 5
+Design e refinamentos visuais.
+Não sacrifique o funcionamento offline para adicionar funcionalidades.
+
+24. Resultado esperado
+Entregue um projeto funcional que permita demonstrar esta história:
+Uma missionária está em uma região sem internet. Ela cria um pedido de oração no Elo. O aplicativo salva o conteúdo localmente. Quando a conexão retorna, o aplicativo sincroniza automaticamente. Um apoiador recebe a atualização, decide acompanhar a missionária e marca que está orando por ela.
+O MVP deve ser pequeno, mas funcional de ponta a ponta.
+Não quero apenas mockups ou telas estáticas. Quero que o fluxo principal funcione de verdade.
+Comece pela estrutura do projeto e pela arquitetura. Depois implemente o backend, banco de dados, mobile e sincronização offline. Ao final, forneça instruções claras para executar o projeto localmente.

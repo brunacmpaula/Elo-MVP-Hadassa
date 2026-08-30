@@ -5,7 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SyncAck } from './syncAck';
 
-export interface HealthStatus {
-  status: string;
+export interface SyncResult {
+  acks: SyncAck[];
 }

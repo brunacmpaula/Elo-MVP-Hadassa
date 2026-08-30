@@ -5,7 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { SyncOperation } from './syncOperation';
 
-export interface HealthStatus {
-  status: string;
+export interface SyncInput {
+  operations: SyncOperation[];
 }
