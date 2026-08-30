@@ -103,7 +103,10 @@ export function MissionaryProfile() {
     setWomenOnlyNotifications,
     logout,
   } = useAuth();
-  const listBottomPadding = useTabContentBottomPadding(120);
+  const listBottomPadding = 24;
+  // The tab bar is absolute, so the fixed account action needs its own
+  // calculated clearance above the tab bar and home indicator.
+  const footerBottomPadding = useTabContentBottomPadding(90);
   const nativeTabs = usesNativeTabs();
 
   const handleNotificationAudienceChange = async (enabled: boolean) => {
@@ -295,6 +298,17 @@ export function MissionaryProfile() {
           </>
         )}
 
+      </ScrollView>
+      <View
+        style={[
+          styles.footer,
+          {
+            backgroundColor: colors.background,
+            borderTopColor: colors.border,
+            paddingBottom: footerBottomPadding,
+          },
+        ]}
+      >
         <Button
           title="Sair da conta"
           icon="log-out"
@@ -303,7 +317,7 @@ export function MissionaryProfile() {
           onPress={logout}
           accessibilityLabel="Sair da conta"
         />
-      </ScrollView>
+      </View>
     </AppSafeAreaView>
   );
 }
@@ -313,6 +327,11 @@ const styles = StyleSheet.create({
   content: {
     padding: 24,
     gap: 18,
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    borderTopWidth: 1,
   },
   header: {
     flexDirection: 'row',
