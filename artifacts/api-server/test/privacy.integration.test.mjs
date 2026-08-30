@@ -317,6 +317,93 @@ test("preferences persist and redact public profile data", async (t) => {
       1,
     );
 
+    await jsonRequest(
+      "/posts/post-community-kits/contribution-availability",
+      { method: "DELETE", headers: supporterHeaders },
+    );
+    await jsonRequest(
+      "/posts/post-community-kits/contribution-availability",
+      { method: "DELETE", headers: secondSupporterHeaders },
+    );
+
+    const nonNeedAvailability = await jsonRequest(
+      "/posts/post-school/contribution-availability",
+      { method: "POST", headers: supporterHeaders },
+    );
+    assert.equal(nonNeedAvailability.response.status, 400);
+
+    const missionaryAvailability = await jsonRequest(
+      "/posts/post-community-kits/contribution-availability",
+      { method: "POST", headers: missionaryHeaders },
+    );
+    assert.equal(missionaryAvailability.response.status, 403);
+
+    const firstAvailability = await jsonRequest(
+      "/posts/post-community-kits/contribution-availability",
+      { method: "POST", headers: supporterHeaders },
+    );
+    const duplicateAvailability = await jsonRequest(
+      "/posts/post-community-kits/contribution-availability",
+      { method: "POST", headers: supporterHeaders },
+    );
+    assert.equal(firstAvailability.response.status, 201);
+    assert.deepEqual(firstAvailability.body, {
+      postId: "post-community-kits",
+      availableByMe: true,
+      availabilityCount: 1,
+    });
+    assert.equal(duplicateAvailability.body.availabilityCount, 1);
+
+    const secondAvailability = await jsonRequest(
+      "/posts/post-community-kits/contribution-availability",
+      { method: "POST", headers: secondSupporterHeaders },
+    );
+    assert.equal(secondAvailability.body.availabilityCount, 2);
+
+    const supporterAvailabilityList = await jsonRequest(
+      "/missionaries/missionary-ana/contribution-availabilities",
+      { headers: supporterHeaders },
+    );
+    assert.equal(supporterAvailabilityList.response.status, 403);
+    const otherMissionaryAvailabilityList = await jsonRequest(
+      "/missionaries/missionary-ana/contribution-availabilities",
+      { headers: { authorization: `Bearer ${otherMissionaryToken}` } },
+    );
+    assert.equal(otherMissionaryAvailabilityList.response.status, 403);
+
+    const ownerAvailabilityList = await jsonRequest(
+      "/missionaries/missionary-ana/contribution-availabilities",
+      { headers: missionaryHeaders },
+    );
+    assert.equal(ownerAvailabilityList.response.status, 200);
+    assert.deepEqual(
+      ownerAvailabilityList.body
+        .filter((item) => item.postId === "post-community-kits")
+        .map((item) => item.supporterName)
+        .sort(),
+      ["Bruno", "Marina"],
+    );
+
+    const removedAvailability = await jsonRequest(
+      "/posts/post-community-kits/contribution-availability",
+      { method: "DELETE", headers: supporterHeaders },
+    );
+    assert.deepEqual(removedAvailability.body, {
+      postId: "post-community-kits",
+      availableByMe: false,
+      availabilityCount: 1,
+    });
+    const supporterNeed = await jsonRequest("/posts/post-community-kits", {
+      headers: supporterHeaders,
+    });
+    assert.equal(supporterNeed.body.contributionAvailableByMe, false);
+    assert.equal(supporterNeed.body.contributionAvailabilityCount, 1);
+
+    await jsonRequest(
+      "/posts/post-community-kits/contribution-availability",
+      { method: "DELETE", headers: secondSupporterHeaders },
+    );
+
     const mediaPayload = {
       clientMediaId: "privacy-media-1",
       uri: "data:image/jpeg;base64,aGVsbG8=",

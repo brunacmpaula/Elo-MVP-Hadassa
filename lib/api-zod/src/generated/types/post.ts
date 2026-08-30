@@ -27,6 +27,13 @@ export interface Post {
   prayedByMe: boolean;
   /** Whether the authenticated supporter saved this missionary. */
   missionarySaved: boolean;
+  /**
+     * Number of supporters who made themselves available for this need.
+     * @minimum 0
+     */
+  contributionAvailabilityCount: number;
+  /** Whether the authenticated supporter is available for this need. */
+  contributionAvailableByMe: boolean;
   media: PostMedia[];
   comments: Comment[];
 }

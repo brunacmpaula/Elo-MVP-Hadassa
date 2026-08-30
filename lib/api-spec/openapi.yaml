@@ -20,6 +20,8 @@ tags:
     description: Supporter comments on missionary content
   - name: prayers
     description: Prayer commitments
+  - name: contribution-availability
+    description: Supporter availability for needs
   - name: sync
     description: Offline operation synchronization
 paths:
@@ -325,6 +327,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PrayerState"
+  /posts/{postId}/contribution-availability:
+    post:
+      operationId: createContributionAvailability
+      tags: [contribution-availability]
+      summary: Register supporter availability for a need
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "201":
+          description: Availability state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionAvailabilityState"
+        "401":
+          description: Authentication required
+        "403":
+          description: Supporter role required
+        "404":
+          description: Not found
+    delete:
+      operationId: removeContributionAvailability
+      tags: [contribution-availability]
+      summary: Remove supporter availability for a need
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        "200":
+          description: Availability state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionAvailabilityState"
+        "401":
+          description: Authentication required
+        "403":
+          description: Supporter role required
+        "404":
+          description: Not found
+  /missionaries/{missionaryId}/contribution-availabilities:
+    get:
+      operationId: listMissionaryContributionAvailabilities
+      tags: [contribution-availability]
+      summary: List supporter availabilities for the missionary's needs
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MissionaryId"
+      responses:
+        "200":
+          description: Supporter availabilities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContributionAvailability"
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the profile owner can access availabilities
+        "404":
+          description: Not found
   /sync:
     post:
       operationId: syncOperations
@@ -453,7 +522,7 @@ components:
           type: boolean
     Post:
       type: object
-      required: [id, missionaryId, missionaryName, type, title, content, status, createdAt, updatedAt, prayerCount, prayedByMe, missionarySaved, media, comments]
+      required: [id, missionaryId, missionaryName, type, title, content, status, createdAt, updatedAt, prayerCount, prayedByMe, missionarySaved, contributionAvailabilityCount, contributionAvailableByMe, media, comments]
       properties:
         id: { type: string }
         missionaryId: { type: string }
@@ -476,6 +545,13 @@ components:
         missionarySaved:
           type: boolean
           description: Whether the authenticated supporter saved this missionary.
+        contributionAvailabilityCount:
+          type: number
+          minimum: 0
+          description: Number of supporters who made themselves available for this need.
+        contributionAvailableByMe:
+          type: boolean
+          description: Whether the authenticated supporter is available for this need.
         media:
           type: array
           items:
@@ -518,6 +594,21 @@ components:
         postId: { type: string }
         prayedByMe: { type: boolean }
         prayerCount: { type: number, minimum: 0 }
+    ContributionAvailabilityState:
+      type: object
+      required: [postId, availableByMe, availabilityCount]
+      properties:
+        postId: { type: string }
+        availableByMe: { type: boolean }
+        availabilityCount: { type: number, minimum: 0 }
+    ContributionAvailability:
+      type: object
+      required: [id, postId, supporterName, createdAt]
+      properties:
+        id: { type: string }
+        postId: { type: string }
+        supporterName: { type: string }
+        createdAt: { type: string, format: date-time }
     PostMediaInput:
       type: object
       required: [clientMediaId, uri, thumbnailUri, mimeType, sizeBytes, width, height]

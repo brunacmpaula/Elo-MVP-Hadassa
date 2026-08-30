@@ -1,7 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useGetMissionary, useFollowMissionary, useUnfollowMissionary, getGetMissionaryQueryKey } from '@workspace/api-client-react';
+import {
+  useGetMissionary,
+  useFollowMissionary,
+  useListMissionaryContributionAvailabilities,
+  useUnfollowMissionary,
+  getGetMissionaryQueryKey,
+  getListMissionaryContributionAvailabilitiesQueryKey,
+} from '@workspace/api-client-react';
 import { useColors } from '../../hooks/useColors';
 import { Button } from '../../components/Button';
 import { PostCard } from '../../components/PostCard';
@@ -13,6 +20,7 @@ import {
   PUBLIC_PRIVACY_QUERY_OPTIONS,
 } from '../../lib/privacy';
 import { useAuth } from '../../context/AuthContext';
+import { formatTimeAgo } from '../../lib/utils';
 
 export default function MissionaryProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -20,6 +28,8 @@ export default function MissionaryProfileScreen() {
   const { bottom } = useAppSafeAreaInsets();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const isOwner =
+    user?.role === 'MISSIONARY' && user.missionaryProfileId === id;
 
   const { data: profile, isLoading, isFetching, refetch } = useGetMissionary(id!, {
     query: {
@@ -31,10 +41,22 @@ export default function MissionaryProfileScreen() {
     profile && isFetching
       ? hideCachedMissionaryProfileFields(profile)
       : profile;
+  const {
+    data: contributionAvailabilities,
+    isLoading: isLoadingAvailabilities,
+    isError: isAvailabilityError,
+    refetch: refetchAvailabilities,
+  } = useListMissionaryContributionAvailabilities(id!, {
+    query: {
+      enabled: isOwner,
+      queryKey: getListMissionaryContributionAvailabilitiesQueryKey(id!),
+    },
+  });
   useFocusEffect(
     React.useCallback(() => {
       void refetch();
-    }, [refetch]),
+      if (isOwner) void refetchAvailabilities();
+    }, [isOwner, refetch, refetchAvailabilities]),
   );
   const followMutation = useFollowMissionary();
   const unfollowMutation = useUnfollowMissionary();
@@ -99,19 +121,6 @@ export default function MissionaryProfileScreen() {
                 onPress={handleFollow}
                 testID="follow-missionary"
               />
-              <Button
-                title="Quero contribuir"
-                icon="gift"
-                variant="outline"
-                onPress={() =>
-                  Alert.alert(
-                    'Contribuição demonstrativa',
-                    'Sua disponibilidade foi registrada apenas como demonstração. Nenhum valor ou dado financeiro será solicitado.',
-                  )
-                }
-                accessibilityLabel="Quero contribuir"
-                testID="demo-contribution"
-              />
             </>
           )}
         </View>
@@ -133,6 +142,88 @@ export default function MissionaryProfileScreen() {
           ))
         )}
       </View>
+
+      {isOwner && (
+        <View style={styles.availabilities}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+            Disponibilidades para contribuir
+          </Text>
+          <Text style={[styles.sectionDescription, { color: colors.mutedForeground }]}>
+            Pessoas que registraram interesse nas suas Necessidades. Nenhum pagamento é iniciado por aqui.
+          </Text>
+          {isLoadingAvailabilities ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : isAvailabilityError ? (
+            <View style={styles.availabilityFeedback}>
+              <Text
+                style={[styles.availabilityError, { color: colors.destructive }]}
+                accessibilityRole="alert"
+              >
+                Não foi possível carregar as disponibilidades. Verifique sua conexão.
+              </Text>
+              <Button
+                title="Tentar novamente"
+                icon="refresh-cw"
+                variant="outline"
+                size="sm"
+                onPress={() => void refetchAvailabilities()}
+                testID="retry-contribution-availabilities"
+              />
+            </View>
+          ) : contributionAvailabilities?.length === 0 ? (
+            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+              Ninguém se disponibilizou ainda.
+            </Text>
+          ) : (
+            visibleProfile.posts
+              .filter((post) => post.type === 'NEED')
+              .map((post) => {
+                const entries =
+                  contributionAvailabilities?.filter(
+                    (availability) => availability.postId === post.id,
+                  ) ?? [];
+                if (entries.length === 0) return null;
+                return (
+                  <View
+                    key={post.id}
+                    style={[
+                      styles.availabilityCard,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                    ]}
+                    testID={`need-availabilities-${post.id}`}
+                  >
+                    <Text style={[styles.availabilityTitle, { color: colors.foreground }]}>
+                      {post.title}
+                    </Text>
+                    <Text
+                      style={[styles.availabilityCount, { color: colors.mutedForeground }]}
+                    >
+                      {entries.length}{' '}
+                      {entries.length === 1
+                        ? 'pessoa disponível'
+                        : 'pessoas disponíveis'}
+                    </Text>
+                    {entries.map((availability) => (
+                      <View key={availability.id} style={styles.supporterRow}>
+                        <Feather name="user" size={16} color={colors.primary} />
+                        <Text
+                          style={[styles.supporterName, { color: colors.foreground }]}
+                        >
+                          {availability.supporterName}
+                        </Text>
+                        <Text
+                          style={[styles.supporterTime, { color: colors.mutedForeground }]}
+                        >
+                          {formatTimeAgo(availability.createdAt)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -149,6 +240,16 @@ const styles = StyleSheet.create({
   actions: { marginBottom: 24, flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center' },
   bio: { fontSize: 16, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 24 },
   posts: { padding: 16 },
+  availabilities: { padding: 16, gap: 12 },
   sectionTitle: { fontSize: 20, fontFamily: 'Inter_700Bold', marginBottom: 16, paddingHorizontal: 8 },
+  sectionDescription: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_400Regular', paddingHorizontal: 8, marginTop: -10 },
   emptyText: { textAlign: 'center', marginTop: 32, fontSize: 16, fontFamily: 'Inter_400Regular' },
+  availabilityFeedback: { alignItems: 'center', gap: 12 },
+  availabilityError: { textAlign: 'center', fontSize: 14, lineHeight: 20, fontFamily: 'Inter_500Medium' },
+  availabilityCard: { borderWidth: 1, borderRadius: 16, padding: 16, gap: 10 },
+  availabilityTitle: { fontSize: 16, fontFamily: 'Inter_700Bold' },
+  availabilityCount: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  supporterRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  supporterName: { flex: 1, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  supporterTime: { fontSize: 12, fontFamily: 'Inter_400Regular' },
 });

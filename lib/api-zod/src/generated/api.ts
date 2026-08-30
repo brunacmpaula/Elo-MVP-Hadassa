@@ -67,6 +67,8 @@ export const GetMissionaryParams = zod.object({
 
 export const getMissionaryResponseTwoPostsItemPrayerCountMin = 0;
 
+export const getMissionaryResponseTwoPostsItemContributionAvailabilityCountMin = 0;
+
 
 export const getMissionaryResponseTwoPostsItemMediaItemOneSizeBytesMax = 1500000;
 
@@ -99,6 +101,8 @@ export const GetMissionaryResponse = zod.object({
   "prayerCount": zod.number().min(getMissionaryResponseTwoPostsItemPrayerCountMin),
   "prayedByMe": zod.boolean(),
   "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
+  "contributionAvailabilityCount": zod.number().min(getMissionaryResponseTwoPostsItemContributionAvailabilityCountMin).describe('Number of supporters who made themselves available for this need.'),
+  "contributionAvailableByMe": zod.boolean().describe('Whether the authenticated supporter is available for this need.'),
   "media": zod.array(zod.object({
   "clientMediaId": zod.string().min(1),
   "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
@@ -188,6 +192,8 @@ export const ListPostsQueryParams = zod.object({
 
 export const listPostsResponsePrayerCountMin = 0;
 
+export const listPostsResponseContributionAvailabilityCountMin = 0;
+
 
 export const listPostsResponseMediaItemOneSizeBytesMax = 1500000;
 
@@ -209,6 +215,8 @@ export const ListPostsResponseItem = zod.object({
   "prayerCount": zod.number().min(listPostsResponsePrayerCountMin),
   "prayedByMe": zod.boolean(),
   "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
+  "contributionAvailabilityCount": zod.number().min(listPostsResponseContributionAvailabilityCountMin).describe('Number of supporters who made themselves available for this need.'),
+  "contributionAvailableByMe": zod.boolean().describe('Whether the authenticated supporter is available for this need.'),
   "media": zod.array(zod.object({
   "clientMediaId": zod.string().min(1),
   "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
@@ -265,6 +273,8 @@ export const CreatePostBody = zod.object({
 
 export const createPostResponsePrayerCountMin = 0;
 
+export const createPostResponseContributionAvailabilityCountMin = 0;
+
 
 export const createPostResponseMediaItemOneSizeBytesMax = 1500000;
 
@@ -286,6 +296,8 @@ export const CreatePostResponse = zod.object({
   "prayerCount": zod.number().min(createPostResponsePrayerCountMin),
   "prayedByMe": zod.boolean(),
   "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
+  "contributionAvailabilityCount": zod.number().min(createPostResponseContributionAvailabilityCountMin).describe('Number of supporters who made themselves available for this need.'),
+  "contributionAvailableByMe": zod.boolean().describe('Whether the authenticated supporter is available for this need.'),
   "media": zod.array(zod.object({
   "clientMediaId": zod.string().min(1),
   "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
@@ -316,6 +328,8 @@ export const GetPostParams = zod.object({
 
 export const getPostResponsePrayerCountMin = 0;
 
+export const getPostResponseContributionAvailabilityCountMin = 0;
+
 
 export const getPostResponseMediaItemOneSizeBytesMax = 1500000;
 
@@ -337,6 +351,8 @@ export const GetPostResponse = zod.object({
   "prayerCount": zod.number().min(getPostResponsePrayerCountMin),
   "prayedByMe": zod.boolean(),
   "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
+  "contributionAvailabilityCount": zod.number().min(getPostResponseContributionAvailabilityCountMin).describe('Number of supporters who made themselves available for this need.'),
+  "contributionAvailableByMe": zod.boolean().describe('Whether the authenticated supporter is available for this need.'),
   "media": zod.array(zod.object({
   "clientMediaId": zod.string().min(1),
   "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
@@ -376,6 +392,8 @@ export const UpdatePostBody = zod.object({
 
 export const updatePostResponsePrayerCountMin = 0;
 
+export const updatePostResponseContributionAvailabilityCountMin = 0;
+
 
 export const updatePostResponseMediaItemOneSizeBytesMax = 1500000;
 
@@ -397,6 +415,8 @@ export const UpdatePostResponse = zod.object({
   "prayerCount": zod.number().min(updatePostResponsePrayerCountMin),
   "prayedByMe": zod.boolean(),
   "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
+  "contributionAvailabilityCount": zod.number().min(updatePostResponseContributionAvailabilityCountMin).describe('Number of supporters who made themselves available for this need.'),
+  "contributionAvailableByMe": zod.boolean().describe('Whether the authenticated supporter is available for this need.'),
   "media": zod.array(zod.object({
   "clientMediaId": zod.string().min(1),
   "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
@@ -495,6 +515,58 @@ export const RemovePrayerResponse = zod.object({
   "prayedByMe": zod.boolean(),
   "prayerCount": zod.number().min(removePrayerResponsePrayerCountMin)
 })
+
+
+/**
+ * @summary Register supporter availability for a need
+ */
+export const CreateContributionAvailabilityParams = zod.object({
+  "postId": zod.coerce.string()
+})
+
+export const createContributionAvailabilityResponseAvailabilityCountMin = 0;
+
+
+
+export const CreateContributionAvailabilityResponse = zod.object({
+  "postId": zod.string(),
+  "availableByMe": zod.boolean(),
+  "availabilityCount": zod.number().min(createContributionAvailabilityResponseAvailabilityCountMin)
+})
+
+
+/**
+ * @summary Remove supporter availability for a need
+ */
+export const RemoveContributionAvailabilityParams = zod.object({
+  "postId": zod.coerce.string()
+})
+
+export const removeContributionAvailabilityResponseAvailabilityCountMin = 0;
+
+
+
+export const RemoveContributionAvailabilityResponse = zod.object({
+  "postId": zod.string(),
+  "availableByMe": zod.boolean(),
+  "availabilityCount": zod.number().min(removeContributionAvailabilityResponseAvailabilityCountMin)
+})
+
+
+/**
+ * @summary List supporter availabilities for the missionary's needs
+ */
+export const ListMissionaryContributionAvailabilitiesParams = zod.object({
+  "missionaryId": zod.coerce.string()
+})
+
+export const ListMissionaryContributionAvailabilitiesResponseItem = zod.object({
+  "id": zod.string(),
+  "postId": zod.string(),
+  "supporterName": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMissionaryContributionAvailabilitiesResponse = zod.array(ListMissionaryContributionAvailabilitiesResponseItem)
 
 
 /**

@@ -22,6 +22,8 @@ import type {
 import type {
   Comment,
   CommentInput,
+  ContributionAvailability,
+  ContributionAvailabilityState,
   FollowState,
   HealthStatus,
   ListPostsParams,
@@ -1253,6 +1255,225 @@ export const useRemovePrayer = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getRemovePrayerMutationOptions(options));
     }
+
+export const getCreateContributionAvailabilityUrl = (postId: string,) => {
+
+
+
+
+  return `/api/posts/${postId}/contribution-availability`
+}
+
+/**
+ * @summary Register supporter availability for a need
+ */
+export const createContributionAvailability = async (postId: string, options?: Parameters<typeof customFetch>[1]): Promise<ContributionAvailabilityState> => {
+
+  return customFetch<ContributionAvailabilityState>(getCreateContributionAvailabilityUrl(postId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreateContributionAvailabilityMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContributionAvailability>>, TError,{postId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createContributionAvailability>>, TError,{postId: string}, TContext> => {
+
+const mutationKey = ['createContributionAvailability'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContributionAvailability>>, {postId: string}> = (props) => {
+          const {postId} = props ?? {};
+
+          return  createContributionAvailability(postId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateContributionAvailabilityMutationResult = NonNullable<Awaited<ReturnType<typeof createContributionAvailability>>>
+
+    export type CreateContributionAvailabilityMutationError = ErrorType<void>
+
+    /**
+ * @summary Register supporter availability for a need
+ */
+export const useCreateContributionAvailability = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContributionAvailability>>, TError,{postId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createContributionAvailability>>,
+        TError,
+        {postId: string},
+        TContext
+      > => {
+      return useMutation(getCreateContributionAvailabilityMutationOptions(options));
+    }
+
+export const getRemoveContributionAvailabilityUrl = (postId: string,) => {
+
+
+
+
+  return `/api/posts/${postId}/contribution-availability`
+}
+
+/**
+ * @summary Remove supporter availability for a need
+ */
+export const removeContributionAvailability = async (postId: string, options?: Parameters<typeof customFetch>[1]): Promise<ContributionAvailabilityState> => {
+
+  return customFetch<ContributionAvailabilityState>(getRemoveContributionAvailabilityUrl(postId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveContributionAvailabilityMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeContributionAvailability>>, TError,{postId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeContributionAvailability>>, TError,{postId: string}, TContext> => {
+
+const mutationKey = ['removeContributionAvailability'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeContributionAvailability>>, {postId: string}> = (props) => {
+          const {postId} = props ?? {};
+
+          return  removeContributionAvailability(postId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveContributionAvailabilityMutationResult = NonNullable<Awaited<ReturnType<typeof removeContributionAvailability>>>
+
+    export type RemoveContributionAvailabilityMutationError = ErrorType<void>
+
+    /**
+ * @summary Remove supporter availability for a need
+ */
+export const useRemoveContributionAvailability = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeContributionAvailability>>, TError,{postId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeContributionAvailability>>,
+        TError,
+        {postId: string},
+        TContext
+      > => {
+      return useMutation(getRemoveContributionAvailabilityMutationOptions(options));
+    }
+
+export const getListMissionaryContributionAvailabilitiesUrl = (missionaryId: string,) => {
+
+
+
+
+  return `/api/missionaries/${missionaryId}/contribution-availabilities`
+}
+
+/**
+ * @summary List supporter availabilities for the missionary's needs
+ */
+export const listMissionaryContributionAvailabilities = async (missionaryId: string, options?: Parameters<typeof customFetch>[1]): Promise<ContributionAvailability[]> => {
+
+  return customFetch<ContributionAvailability[]>(getListMissionaryContributionAvailabilitiesUrl(missionaryId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMissionaryContributionAvailabilitiesQueryKey = (missionaryId: string,) => {
+    return [
+    `/api/missionaries/${missionaryId}/contribution-availabilities`
+    ] as const;
+    }
+
+
+export const getListMissionaryContributionAvailabilitiesQueryOptions = <TData = Awaited<ReturnType<typeof listMissionaryContributionAvailabilities>>, TError = ErrorType<void>>(missionaryId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMissionaryContributionAvailabilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMissionaryContributionAvailabilitiesQueryKey(missionaryId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMissionaryContributionAvailabilities>>> = ({ signal }) => listMissionaryContributionAvailabilities(missionaryId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: missionaryId !== null && missionaryId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMissionaryContributionAvailabilities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMissionaryContributionAvailabilitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listMissionaryContributionAvailabilities>>>
+export type ListMissionaryContributionAvailabilitiesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List supporter availabilities for the missionary's needs
+ */
+
+export function useListMissionaryContributionAvailabilities<TData = Awaited<ReturnType<typeof listMissionaryContributionAvailabilities>>, TError = ErrorType<void>>(
+ missionaryId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMissionaryContributionAvailabilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMissionaryContributionAvailabilitiesQueryOptions(missionaryId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getSyncOperationsUrl = () => {
 

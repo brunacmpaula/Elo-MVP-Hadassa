@@ -7,9 +7,11 @@ import {
 import {
   CreatePostCommentBody,
   CreatePostCommentResponse,
+  CreateContributionAvailabilityResponse,
   CreatePostBody,
   CreatePostResponse,
   ListPostCommentsResponse,
+  ListMissionaryContributionAvailabilitiesResponse,
   FollowMissionaryResponse,
   GetMissionaryResponse,
   GetMissionaryPreferencesResponse,
@@ -21,6 +23,7 @@ import {
   LoginResponse,
   PrayForPostResponse,
   RemovePrayerResponse,
+  RemoveContributionAvailabilityResponse,
   SyncOperationsBody,
   SyncOperationsResponse,
   UnfollowMissionaryResponse,
@@ -29,8 +32,12 @@ import {
   UpdatePostBody,
   UpdatePostResponse,
 } from "@workspace/api-zod";
-import { db, profilePreferencesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import {
+  contributionAvailabilitiesTable,
+  db,
+  profilePreferencesTable,
+} from "@workspace/db";
+import { and, eq, inArray } from "drizzle-orm";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { dispatchMissionaryNotification } from "../lib/notifications";
 
@@ -143,6 +150,24 @@ const missionaries: Missionary[] = [
 
 const now = new Date().toISOString();
 const posts: Post[] = [
+  {
+    id: "post-community-kits",
+    missionaryId: "missionary-ana",
+    missionaryName: "Ana Silva",
+    missionaryCountry: "Moçambique",
+    type: "NEED",
+    title: "Kits de cuidado para novas famílias",
+    content:
+      "Precisamos de pessoas disponíveis para conversar sobre formas de apoiar a montagem e a entrega dos próximos kits.",
+    status: "PUBLISHED",
+    createdAt: now,
+    updatedAt: now,
+    prayerCount: 7,
+    prayedByMe: false,
+    missionarySaved: false,
+    media: [],
+    comments: [],
+  },
   {
     id: "post-prayer-team",
     missionaryId: "missionary-ana",
@@ -377,6 +402,32 @@ async function saveProfilePreferences(
   return preferences;
 }
 
+async function getContributionAvailabilityState(
+  post: Post,
+  viewer: SessionUser | null,
+) {
+  if (post.type !== "NEED") {
+    return {
+      postId: post.id,
+      availableByMe: false,
+      availabilityCount: 0,
+    };
+  }
+
+  const records = await db
+    .select({ supporterId: contributionAvailabilitiesTable.supporterId })
+    .from(contributionAvailabilitiesTable)
+    .where(eq(contributionAvailabilitiesTable.postId, post.id));
+
+  return {
+    postId: post.id,
+    availableByMe:
+      viewer?.role === "SUPPORTER" &&
+      records.some((record) => record.supporterId === viewer.id),
+    availabilityCount: records.length,
+  };
+}
+
 function ensureProfileOwner(
   req: Request,
   res: Response,
@@ -538,12 +589,19 @@ async function toPublicMissionary(
 
 async function toPublicPost(post: Post, viewer: SessionUser | null) {
   const missionary = findMissionary(post.missionaryId);
+  const contributionAvailability = await getContributionAvailabilityState(
+    post,
+    viewer,
+  );
   const viewerPost = {
     ...post,
     missionarySaved:
       viewer?.role === "SUPPORTER"
         ? getFollowedMissionaries(viewer.id).has(post.missionaryId)
         : false,
+    contributionAvailabilityCount:
+      contributionAvailability.availabilityCount,
+    contributionAvailableByMe: contributionAvailability.availableByMe,
   };
   if (!missionary) return viewerPost;
   const preferences = await getProfilePreferences(missionary.userId);
@@ -613,6 +671,43 @@ router.get("/missionaries/:missionaryId/preferences", async (req, res) => {
   const preferences = await getProfilePreferences(missionary.userId);
   res.json(GetMissionaryPreferencesResponse.parse(preferences));
 });
+
+router.get(
+  "/missionaries/:missionaryId/contribution-availabilities",
+  async (req, res) => {
+    const missionary = findMissionary(req.params["missionaryId"] ?? "");
+    if (!missionary) {
+      res.status(404).json({ error: "Missionário não encontrado" });
+      return;
+    }
+    if (!ensureProfileOwner(req, res, missionary)) return;
+
+    const needPostIds = posts
+      .filter(
+        (post) => post.missionaryId === missionary.id && post.type === "NEED",
+      )
+      .map((post) => post.id);
+    if (needPostIds.length === 0) {
+      res.json(ListMissionaryContributionAvailabilitiesResponse.parse([]));
+      return;
+    }
+
+    const records = await db
+      .select()
+      .from(contributionAvailabilitiesTable)
+      .where(inArray(contributionAvailabilitiesTable.postId, needPostIds));
+    const response = records
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+      .map(({ id, postId, supporterName, createdAt }) => ({
+        id,
+        postId,
+        supporterName,
+        createdAt,
+      }));
+
+    res.json(ListMissionaryContributionAvailabilitiesResponse.parse(response));
+  },
+);
 
 router.patch("/missionaries/:missionaryId/preferences", async (req, res) => {
   const missionary = findMissionary(req.params["missionaryId"] ?? "");
@@ -704,7 +799,13 @@ router.post("/posts", async (req, res) => {
       res.status(403).json({ error: "Operação pertence a outro perfil" });
       return;
     }
-    res.status(201).json(CreatePostResponse.parse(existing));
+    res
+      .status(201)
+      .json(
+        CreatePostResponse.parse(
+          await toPublicPost(existing, getAuthenticatedUser(req)),
+        ),
+      );
     return;
   }
 
@@ -754,7 +855,13 @@ router.post("/posts", async (req, res) => {
     },
     "Queued missionary post notifications",
   );
-  res.status(201).json(CreatePostResponse.parse(post));
+  res
+    .status(201)
+    .json(
+      CreatePostResponse.parse(
+        await toPublicPost(post, getAuthenticatedUser(req)),
+      ),
+    );
 });
 
 router.get("/posts/:postId", async (req, res) => {
@@ -767,7 +874,7 @@ router.get("/posts/:postId", async (req, res) => {
   res.json(GetPostResponse.parse(publicPost));
 });
 
-router.patch("/posts/:postId", (req, res) => {
+router.patch("/posts/:postId", async (req, res) => {
   const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
@@ -778,7 +885,11 @@ router.patch("/posts/:postId", (req, res) => {
   if (input.title) post.title = input.title;
   if (input.content) post.content = input.content;
   post.updatedAt = new Date().toISOString();
-  res.json(UpdatePostResponse.parse(post));
+  res.json(
+    UpdatePostResponse.parse(
+      await toPublicPost(post, getAuthenticatedUser(req)),
+    ),
+  );
 });
 
 router.get("/posts/:postId/comments", (req, res) => {
@@ -862,6 +973,71 @@ router.delete("/posts/:postId/prayers", (req, res) => {
     }),
   );
 });
+
+router.post(
+  "/posts/:postId/contribution-availability",
+  async (req, res) => {
+    const post = posts.find((item) => item.id === req.params["postId"]);
+    if (!post) {
+      res.status(404).json({ error: "Publicação não encontrada" });
+      return;
+    }
+    const supporter = ensureSupporterUser(req, res);
+    if (!supporter) return;
+    if (post.type !== "NEED") {
+      res
+        .status(400)
+        .json({ error: "Disponibilidade só pode ser registrada em Necessidades" });
+      return;
+    }
+
+    await db
+      .insert(contributionAvailabilitiesTable)
+      .values({
+        id: `availability-${randomUUID()}`,
+        postId: post.id,
+        supporterId: supporter.id,
+        supporterName: supporter.name,
+      })
+      .onConflictDoNothing();
+
+    const state = await getContributionAvailabilityState(post, supporter);
+    res
+      .status(201)
+      .json(CreateContributionAvailabilityResponse.parse(state));
+  },
+);
+
+router.delete(
+  "/posts/:postId/contribution-availability",
+  async (req, res) => {
+    const post = posts.find((item) => item.id === req.params["postId"]);
+    if (!post) {
+      res.status(404).json({ error: "Publicação não encontrada" });
+      return;
+    }
+    const supporter = ensureSupporterUser(req, res);
+    if (!supporter) return;
+    if (post.type !== "NEED") {
+      res
+        .status(400)
+        .json({ error: "Disponibilidade só pode ser retirada de Necessidades" });
+      return;
+    }
+
+    await db
+      .delete(contributionAvailabilitiesTable)
+      .where(
+        and(
+          eq(contributionAvailabilitiesTable.postId, post.id),
+          eq(contributionAvailabilitiesTable.supporterId, supporter.id),
+        ),
+      );
+
+    const state = await getContributionAvailabilityState(post, supporter);
+    res.json(RemoveContributionAvailabilityResponse.parse(state));
+  },
+);
 
 router.post("/sync", (req, res) => {
   const authenticatedMissionary = ensureMissionaryUser(req, res);

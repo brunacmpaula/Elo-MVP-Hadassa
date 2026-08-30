@@ -611,17 +611,17 @@ test('shows the contribution CTA only to supporters on need posts', () => {
   );
   assert.match(
     sources.postDetail,
-    /title="Quero contribuir"/,
+    /'Quero contribuir'/,
     'need contribution CTA must use the standardized label',
   );
   assert.match(
     sources.postDetail,
-    /accessibilityLabel="Quero contribuir"/,
-    'need contribution CTA must expose an accessible label',
+    /'Retirar minha disponibilidade'/,
+    'registered availability must expose an accessible removal label',
   );
   assert.match(
     sources.postDetail,
-    /testID="demo-contribution"/,
+    /testID="contribution-availability"/,
     'need contribution CTA must expose a stable selector',
   );
   assert.match(
@@ -636,41 +636,51 @@ test('shows the contribution CTA only to supporters on need posts', () => {
   );
   assert.match(
     sources.postDetail,
-    /Alert\.alert\(\s*'Contribuição demonstrativa',\s*'Sua disponibilidade foi registrada apenas como demonstração\. Nenhum valor ou dado financeiro será solicitado\.'/,
-    'the contribution CTA must provide a clear demonstration-only confirmation',
+    /useCreateContributionAvailability/,
+    'the contribution CTA must persist registered availability',
+  );
+  assert.match(
+    sources.postDetail,
+    /useRemoveContributionAvailability/,
+    'the contribution CTA must allow availability removal',
+  );
+  assert.match(
+    sources.postDetail,
+    /Nenhum valor ou dado financeiro será solicitado/,
+    'the contribution CTA must state that it does not start a financial flow',
   );
   assert.doesNotMatch(
     sources.postDetail,
-    /visiblePost\.type === '(?:UPDATE|PRAYER_REQUEST)'[\s\S]*?demo-contribution/,
+    /visiblePost\.type === '(?:UPDATE|PRAYER_REQUEST)'[\s\S]*?contribution-availability/,
     'updates and prayer requests must not opt into contribution CTA rendering',
   );
 });
 
-test('standardizes the missionary profile contribution CTA without widening its role gate', () => {
+test('shows contribution availabilities only to the missionary profile owner', () => {
   assert.match(
     sources.missionaryDetail,
-    /\{user\?\.role === 'SUPPORTER' && \(/,
-    'missionary profile actions must remain supporter-only',
+    /user\?\.role === 'MISSIONARY' && user\.missionaryProfileId === id/,
+    'availability visibility must be restricted to the profile owner',
   );
   assert.match(
     sources.missionaryDetail,
-    /title="Quero contribuir"/,
-    'missionary profile must use the standardized contribution label',
+    /useListMissionaryContributionAvailabilities/,
+    'missionary profile must load availability records',
   );
   assert.match(
     sources.missionaryDetail,
-    /accessibilityLabel="Quero contribuir"/,
-    'missionary profile contribution CTA must expose an accessible label',
+    /Disponibilidades para contribuir/,
+    'missionary profile must identify the availability section',
   );
   assert.match(
     sources.missionaryDetail,
-    /testID="demo-contribution"/,
-    'missionary profile contribution CTA must keep a stable selector',
+    /retry-contribution-availabilities/,
+    'missionary profile must offer recovery after a loading error',
   );
-  assert.match(
+  assert.doesNotMatch(
     sources.missionaryDetail,
-    /Alert\.alert\(\s*'Contribuição demonstrativa',\s*'Sua disponibilidade foi registrada apenas como demonstração\. Nenhum valor ou dado financeiro será solicitado\.'/,
-    'missionary profile must keep the demonstration-only confirmation',
+    /demo-contribution/,
+    'missionary profile must not keep the non-targeted demonstration CTA',
   );
 });
 

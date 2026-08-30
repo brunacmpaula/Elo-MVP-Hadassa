@@ -8,6 +8,8 @@
 
 export * from './comment';
 export * from './commentInput';
+export * from './contributionAvailability';
+export * from './contributionAvailabilityState';
 export * from './followState';
 export * from './healthStatus';
 export * from './listPostsParams';

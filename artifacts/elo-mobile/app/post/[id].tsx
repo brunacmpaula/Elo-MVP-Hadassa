@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, TextInput } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   useCreatePostComment,
+  useCreateContributionAvailability,
   useGetPost,
   useListPostComments,
   usePrayForPost,
+  useRemoveContributionAvailability,
   useRemovePrayer,
   getGetPostQueryKey,
   getListPostCommentsQueryKey,
@@ -21,6 +23,7 @@ import {
   PUBLIC_PRIVACY_QUERY_OPTIONS,
 } from '../../lib/privacy';
 import { useAuth } from '../../context/AuthContext';
+import { useOfflineMode } from '../../context/OfflineContext';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,8 +31,10 @@ export default function PostDetailScreen() {
   const { bottom } = useAppSafeAreaInsets();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isOfflineMode } = useOfflineMode();
   const [comment, setComment] = React.useState('');
   const [commentError, setCommentError] = React.useState<string | null>(null);
+  const [availabilityError, setAvailabilityError] = React.useState<string | null>(null);
   
   const { data: post, isLoading, isFetching, refetch } = useGetPost(id!, {
     query: {
@@ -48,6 +53,8 @@ export default function PostDetailScreen() {
   const removePrayerMutation = useRemovePrayer();
   const commentsQuery = useListPostComments(id!);
   const commentMutation = useCreatePostComment();
+  const createAvailabilityMutation = useCreateContributionAvailability();
+  const removeAvailabilityMutation = useRemoveContributionAvailability();
 
   const submitComment = () => {
     const content = comment.trim();
@@ -87,10 +94,60 @@ export default function PostDetailScreen() {
     }
   };
 
-  const handleDemoContribution = () => {
-    Alert.alert(
-      'Contribuição demonstrativa',
-      'Sua disponibilidade foi registrada apenas como demonstração. Nenhum valor ou dado financeiro será solicitado.',
+  const handleContributionAvailability = () => {
+    if (!post || post.type !== 'NEED') return;
+
+    const queryKey = getGetPostQueryKey(post.id);
+    const previousPost = queryClient.getQueryData(queryKey);
+    const nextAvailable = !post.contributionAvailableByMe;
+    setAvailabilityError(null);
+    queryClient.setQueryData(queryKey, (old: any) =>
+      old
+        ? {
+            ...old,
+            contributionAvailableByMe: nextAvailable,
+            contributionAvailabilityCount: Math.max(
+              0,
+              old.contributionAvailabilityCount + (nextAvailable ? 1 : -1),
+            ),
+          }
+        : old,
+    );
+
+    const mutation = post.contributionAvailableByMe
+      ? removeAvailabilityMutation
+      : createAvailabilityMutation;
+    mutation.mutate(
+      { postId: post.id },
+      {
+        onSuccess: (state) => {
+          queryClient.setQueryData(queryKey, (old: any) =>
+            old
+              ? {
+                  ...old,
+                  contributionAvailableByMe: state.availableByMe,
+                  contributionAvailabilityCount: state.availabilityCount,
+                }
+              : old,
+          );
+        },
+        onError: () => {
+          queryClient.setQueryData(queryKey, previousPost);
+          setAvailabilityError(
+            isOfflineMode
+              ? 'Você está sem conexão. Sua disponibilidade não foi alterada.'
+              : 'Não foi possível atualizar sua disponibilidade. Verifique sua conexão e tente novamente.',
+          );
+        },
+        onSettled: () => {
+          queryClient.invalidateQueries({ queryKey });
+          queryClient.invalidateQueries({
+            predicate: (query) =>
+              String(query.queryKey[0]).startsWith('/api/missionaries/') ||
+              String(query.queryKey[0]).includes('/contribution-availabilities'),
+          });
+        },
+      },
     );
   };
 
@@ -162,15 +219,49 @@ export default function PostDetailScreen() {
           testID="pray-for-post"
         />
         {user?.role === 'SUPPORTER' && visiblePost.type === 'NEED' && (
-          <Button
-            title="Quero contribuir"
-            icon="gift"
-            variant="outline"
-            fullWidth
-            onPress={handleDemoContribution}
-            accessibilityLabel="Quero contribuir"
-            testID="demo-contribution"
-          />
+          <View style={styles.availability}>
+            <Button
+              title={
+                visiblePost.contributionAvailableByMe
+                  ? 'Disponibilidade registrada'
+                  : 'Quero contribuir'
+              }
+              icon={visiblePost.contributionAvailableByMe ? 'check-circle' : 'gift'}
+              variant={visiblePost.contributionAvailableByMe ? 'secondary' : 'outline'}
+              fullWidth
+              onPress={handleContributionAvailability}
+              loading={
+                createAvailabilityMutation.isPending ||
+                removeAvailabilityMutation.isPending
+              }
+              accessibilityLabel={
+                visiblePost.contributionAvailableByMe
+                  ? 'Retirar minha disponibilidade'
+                  : 'Quero contribuir'
+              }
+              testID="contribution-availability"
+            />
+            <Text style={[styles.availabilityStatus, { color: colors.mutedForeground }]}>
+              {visiblePost.contributionAvailabilityCount === 0
+                ? 'Seja a primeira pessoa a se disponibilizar.'
+                : `${visiblePost.contributionAvailabilityCount} ${
+                    visiblePost.contributionAvailabilityCount === 1
+                      ? 'pessoa disponível'
+                      : 'pessoas disponíveis'
+                  }.`}
+            </Text>
+            <Text style={[styles.availabilityHint, { color: colors.mutedForeground }]}>
+              Isso registra apenas seu interesse. Nenhum valor ou dado financeiro será solicitado.
+            </Text>
+            {availabilityError && (
+              <Text
+                style={[styles.availabilityError, { color: colors.destructive }]}
+                accessibilityRole="alert"
+              >
+                {availabilityError}
+              </Text>
+            )}
+          </View>
         )}
       </View>
 
@@ -267,6 +358,10 @@ const styles = StyleSheet.create({
   footer: { padding: 24, borderTopWidth: 1, gap: 16 },
   stats: { flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', paddingBottom: 8 },
   statsText: { fontSize: 14, fontFamily: 'Inter_500Medium' },
+  availability: { alignItems: 'center', gap: 8 },
+  availabilityStatus: { fontSize: 14, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
+  availabilityHint: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  availabilityError: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_500Medium', textAlign: 'center' },
   comments: { padding: 24, borderTopWidth: 1, gap: 12 },
   commentsTitle: { fontSize: 20, fontFamily: 'Inter_700Bold' },
   emptyComments: { fontSize: 14, fontFamily: 'Inter_400Regular' },
