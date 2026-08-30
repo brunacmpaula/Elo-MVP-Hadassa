@@ -1,6 +1,50 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  hideCachedMissionaryProfileFields,
+  hideCachedPostFields,
+} from '../lib/privacy.js';
+
+test('removes cached private fields while a supporter device refreshes', () => {
+  const cachedProfile = {
+    id: 'missionary-ana',
+    userId: 'user-ana',
+    name: 'Ana Silva',
+    email: 'ana@elo.demo',
+    bio: 'Biografia ainda no cache',
+    country: 'Moçambique',
+    initials: 'AS',
+    isFollowed: true,
+    latestPostType: 'UPDATE',
+    posts: [
+      {
+        id: 'post-cached',
+        missionaryId: 'missionary-ana',
+        missionaryName: 'Ana Silva',
+        missionaryCountry: 'Moçambique',
+        type: 'UPDATE',
+        title: 'Atualização',
+        content: 'Conteúdo',
+        status: 'PUBLISHED',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        prayerCount: 0,
+        prayedByMe: false,
+      },
+    ],
+  };
+
+  const safeProfile = hideCachedMissionaryProfileFields(cachedProfile);
+  assert.equal('email' in safeProfile, false);
+  assert.equal('bio' in safeProfile, false);
+  assert.equal('country' in safeProfile, false);
+  assert.equal('missionaryCountry' in safeProfile.posts[0], false);
+  assert.equal(
+    'missionaryCountry' in hideCachedPostFields(cachedProfile.posts[0]),
+    false,
+  );
+});
+import {
   enqueuePendingPost,
   getPendingOperations,
   markOperationFailed,

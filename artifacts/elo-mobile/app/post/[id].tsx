@@ -1,19 +1,35 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useGetPost, usePrayForPost, useRemovePrayer, getGetPostQueryKey } from '@workspace/api-client-react';
 import { useColors } from '../../hooks/useColors';
 import { formatTimeAgo, translatePostType } from '../../lib/utils';
 import { Button } from '../../components/Button';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  hideCachedPostFields,
+  PUBLIC_PRIVACY_QUERY_OPTIONS,
+} from '../../lib/privacy';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const queryClient = useQueryClient();
   
-  const { data: post, isLoading } = useGetPost(id!);
+  const { data: post, isLoading, isFetching, refetch } = useGetPost(id!, {
+    query: {
+      ...PUBLIC_PRIVACY_QUERY_OPTIONS,
+      queryKey: getGetPostQueryKey(id!),
+    },
+  });
+  const visiblePost =
+    post && isFetching ? hideCachedPostFields(post) : post;
+  useFocusEffect(
+    React.useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
   const prayMutation = usePrayForPost();
   const removePrayerMutation = useRemovePrayer();
 
@@ -32,7 +48,7 @@ export default function PostDetailScreen() {
     }
   };
 
-  if (isLoading || !post) {
+  if (isLoading || !visiblePost) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} />
@@ -46,18 +62,18 @@ export default function PostDetailScreen() {
         <View style={styles.authorRow}>
           <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
             <Text style={[styles.avatarText, { color: colors.secondaryForeground }]}>
-              {post.missionaryName.charAt(0).toUpperCase()}
+              {visiblePost.missionaryName.charAt(0).toUpperCase()}
             </Text>
           </View>
           <View>
-            <Text style={[styles.authorName, { color: colors.foreground }]}>{post.missionaryName}</Text>
+            <Text style={[styles.authorName, { color: colors.foreground }]}>{visiblePost.missionaryName}</Text>
             <Text style={[styles.meta, { color: colors.mutedForeground }]}>
-              {translatePostType(post.type)} • {formatTimeAgo(post.createdAt)}
+              {translatePostType(visiblePost.type)} • {formatTimeAgo(visiblePost.createdAt)}
             </Text>
           </View>
         </View>
         
-        {post.status !== 'PUBLISHED' && (
+        {visiblePost.status !== 'PUBLISHED' && (
           <View style={[styles.statusBadge, { backgroundColor: colors.warning + '20' }]}>
             <Text style={[styles.statusText, { color: colors.warning }]}>Local</Text>
           </View>
@@ -65,22 +81,22 @@ export default function PostDetailScreen() {
       </View>
 
       <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.foreground }]}>{post.title}</Text>
-        <Text style={[styles.body, { color: colors.foreground }]}>{post.content}</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>{visiblePost.title}</Text>
+        <Text style={[styles.body, { color: colors.foreground }]}>{visiblePost.content}</Text>
       </View>
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <View style={styles.stats}>
           <Feather name="heart" size={16} color={colors.mutedForeground} />
           <Text style={[styles.statsText, { color: colors.mutedForeground }]}>
-            {post.prayerCount} orações
+            {visiblePost.prayerCount} orações
           </Text>
         </View>
         
         <Button
-          title={post.prayedByMe ? 'Estou Orando' : 'Orar'}
+          title={visiblePost.prayedByMe ? 'Estou Orando' : 'Orar'}
           icon="heart"
-          variant={post.prayedByMe ? 'wine' : 'secondary'}
+          variant={visiblePost.prayedByMe ? 'wine' : 'secondary'}
           fullWidth
           onPress={handlePray}
         />

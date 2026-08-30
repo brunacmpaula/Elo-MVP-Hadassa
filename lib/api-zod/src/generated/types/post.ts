@@ -12,7 +12,8 @@ export interface Post {
   id: string;
   missionaryId: string;
   missionaryName: string;
-  missionaryCountry: string;
+  /** Omitted when the missionary hides their location. */
+  missionaryCountry?: string;
   type: PostType;
   title: string;
   content: string;

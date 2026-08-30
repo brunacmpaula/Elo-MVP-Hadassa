@@ -52,6 +52,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Session"
+        "401":
+          description: Invalid credentials
   /missionaries:
     get:
       operationId: listMissionaries
@@ -82,6 +84,53 @@ paths:
                 $ref: "#/components/schemas/MissionaryProfile"
         "404":
           description: Not found
+  /missionaries/{missionaryId}/preferences:
+    get:
+      operationId: getMissionaryPreferences
+      tags: [missionaries]
+      summary: Get the authenticated missionary's visibility preferences
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MissionaryId"
+      responses:
+        "200":
+          description: Profile visibility preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilePreferences"
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the profile owner can access these preferences
+    patch:
+      operationId: updateMissionaryPreferences
+      tags: [missionaries]
+      summary: Update the authenticated missionary's visibility preferences
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MissionaryId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfilePreferences"
+      responses:
+        "200":
+          description: Updated profile visibility preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilePreferences"
+        "400":
+          description: Invalid preferences
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the profile owner can update these preferences
   /missionaries/{missionaryId}/follow:
     post:
       operationId: followMissionary
@@ -138,6 +187,8 @@ paths:
       operationId: createPost
       tags: [posts]
       summary: Create a missionary post
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -151,6 +202,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Post"
+        "401":
+          description: Authentication required
+        "403":
+          description: Missionary role required
   /posts/{postId}:
     get:
       operationId: getPost
@@ -171,6 +226,8 @@ paths:
       operationId: updatePost
       tags: [posts]
       summary: Edit a missionary post
+      security:
+        - BearerAuth: []
       parameters:
         - $ref: "#/components/parameters/PostId"
       requestBody:
@@ -186,6 +243,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Post"
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the post owner can edit it
   /posts/{postId}/prayers:
     post:
       operationId: prayForPost
@@ -218,6 +279,8 @@ paths:
       operationId: syncOperations
       tags: [sync]
       summary: Process idempotent offline operations
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -231,7 +294,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SyncResult"
+        "401":
+          description: Authentication required
+        "403":
+          description: Missionary role required
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
   parameters:
     MissionaryId:
       name: missionaryId
@@ -264,7 +335,7 @@ components:
           minLength: 1
     User:
       type: object
-      required: [id, name, email, role]
+      required: [id, name, email, role, gender]
       properties:
         id: { type: string }
         name: { type: string }
@@ -272,6 +343,12 @@ components:
         role:
           type: string
           enum: [MISSIONARY, SUPPORTER]
+        gender:
+          type: string
+          enum: [FEMALE, MALE]
+        missionaryProfileId:
+          type: string
+          description: Present for missionary accounts and resolved by the server.
     Session:
       type: object
       required: [user, token]
@@ -282,13 +359,20 @@ components:
           type: string
     Missionary:
       type: object
-      required: [id, userId, name, bio, country, initials, isFollowed]
+      required: [id, userId, name, initials, isFollowed]
       properties:
         id: { type: string }
         userId: { type: string }
         name: { type: string }
-        bio: { type: string }
-        country: { type: string }
+        email:
+          type: string
+          description: Omitted when the missionary hides their email address.
+        bio:
+          type: string
+          description: Omitted when the missionary hides their biography.
+        country:
+          type: string
+          description: Omitted when the missionary hides their location.
         initials: { type: string }
         isFollowed: { type: boolean }
         latestPostType:
@@ -304,14 +388,28 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Post"
+    ProfilePreferences:
+      type: object
+      required: [hiddenFields, womenOnlyNotifications]
+      properties:
+        hiddenFields:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [email, location, bio]
+        womenOnlyNotifications:
+          type: boolean
     Post:
       type: object
-      required: [id, missionaryId, missionaryName, missionaryCountry, type, title, content, status, createdAt, updatedAt, prayerCount, prayedByMe]
+      required: [id, missionaryId, missionaryName, type, title, content, status, createdAt, updatedAt, prayerCount, prayedByMe]
       properties:
         id: { type: string }
         missionaryId: { type: string }
         missionaryName: { type: string }
-        missionaryCountry: { type: string }
+        missionaryCountry:
+          type: string
+          description: Omitted when the missionary hides their location.
         type:
           type: string
           enum: [UPDATE, PRAYER_REQUEST, NEED]

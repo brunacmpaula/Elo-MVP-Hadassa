@@ -33,7 +33,9 @@ export const LoginResponse = zod.object({
   "id": zod.string(),
   "name": zod.string(),
   "email": zod.string(),
-  "role": zod.enum(['MISSIONARY', 'SUPPORTER'])
+  "role": zod.enum(['MISSIONARY', 'SUPPORTER']),
+  "gender": zod.enum(['FEMALE', 'MALE']),
+  "missionaryProfileId": zod.string().optional().describe('Present for missionary accounts and resolved by the server.')
 }),
   "token": zod.string()
 })
@@ -46,8 +48,9 @@ export const ListMissionariesResponseItem = zod.object({
   "id": zod.string(),
   "userId": zod.string(),
   "name": zod.string(),
-  "bio": zod.string(),
-  "country": zod.string(),
+  "email": zod.string().optional().describe('Omitted when the missionary hides their email address.'),
+  "bio": zod.string().optional().describe('Omitted when the missionary hides their biography.'),
+  "country": zod.string().optional().describe('Omitted when the missionary hides their location.'),
   "initials": zod.string(),
   "isFollowed": zod.boolean(),
   "latestPostType": zod.union([zod.literal('UPDATE'),zod.literal('PRAYER_REQUEST'),zod.literal('NEED'),zod.literal(null)]).nullish()
@@ -70,8 +73,9 @@ export const GetMissionaryResponse = zod.object({
   "id": zod.string(),
   "userId": zod.string(),
   "name": zod.string(),
-  "bio": zod.string(),
-  "country": zod.string(),
+  "email": zod.string().optional().describe('Omitted when the missionary hides their email address.'),
+  "bio": zod.string().optional().describe('Omitted when the missionary hides their biography.'),
+  "country": zod.string().optional().describe('Omitted when the missionary hides their location.'),
   "initials": zod.string(),
   "isFollowed": zod.boolean(),
   "latestPostType": zod.union([zod.literal('UPDATE'),zod.literal('PRAYER_REQUEST'),zod.literal('NEED'),zod.literal(null)]).nullish()
@@ -80,7 +84,7 @@ export const GetMissionaryResponse = zod.object({
   "id": zod.string(),
   "missionaryId": zod.string(),
   "missionaryName": zod.string(),
-  "missionaryCountry": zod.string(),
+  "missionaryCountry": zod.string().optional().describe('Omitted when the missionary hides their location.'),
   "type": zod.enum(['UPDATE', 'PRAYER_REQUEST', 'NEED']),
   "title": zod.string(),
   "content": zod.string(),
@@ -91,6 +95,37 @@ export const GetMissionaryResponse = zod.object({
   "prayedByMe": zod.boolean()
 }))
 }))
+
+
+/**
+ * @summary Get the authenticated missionary's visibility preferences
+ */
+export const GetMissionaryPreferencesParams = zod.object({
+  "missionaryId": zod.coerce.string()
+})
+
+export const GetMissionaryPreferencesResponse = zod.object({
+  "hiddenFields": zod.array(zod.enum(['email', 'location', 'bio'])),
+  "womenOnlyNotifications": zod.boolean()
+})
+
+
+/**
+ * @summary Update the authenticated missionary's visibility preferences
+ */
+export const UpdateMissionaryPreferencesParams = zod.object({
+  "missionaryId": zod.coerce.string()
+})
+
+export const UpdateMissionaryPreferencesBody = zod.object({
+  "hiddenFields": zod.array(zod.enum(['email', 'location', 'bio'])),
+  "womenOnlyNotifications": zod.boolean()
+})
+
+export const UpdateMissionaryPreferencesResponse = zod.object({
+  "hiddenFields": zod.array(zod.enum(['email', 'location', 'bio'])),
+  "womenOnlyNotifications": zod.boolean()
+})
 
 
 /**
@@ -135,7 +170,7 @@ export const ListPostsResponseItem = zod.object({
   "id": zod.string(),
   "missionaryId": zod.string(),
   "missionaryName": zod.string(),
-  "missionaryCountry": zod.string(),
+  "missionaryCountry": zod.string().optional().describe('Omitted when the missionary hides their location.'),
   "type": zod.enum(['UPDATE', 'PRAYER_REQUEST', 'NEED']),
   "title": zod.string(),
   "content": zod.string(),
@@ -172,7 +207,7 @@ export const CreatePostResponse = zod.object({
   "id": zod.string(),
   "missionaryId": zod.string(),
   "missionaryName": zod.string(),
-  "missionaryCountry": zod.string(),
+  "missionaryCountry": zod.string().optional().describe('Omitted when the missionary hides their location.'),
   "type": zod.enum(['UPDATE', 'PRAYER_REQUEST', 'NEED']),
   "title": zod.string(),
   "content": zod.string(),
@@ -199,7 +234,7 @@ export const GetPostResponse = zod.object({
   "id": zod.string(),
   "missionaryId": zod.string(),
   "missionaryName": zod.string(),
-  "missionaryCountry": zod.string(),
+  "missionaryCountry": zod.string().optional().describe('Omitted when the missionary hides their location.'),
   "type": zod.enum(['UPDATE', 'PRAYER_REQUEST', 'NEED']),
   "title": zod.string(),
   "content": zod.string(),
@@ -235,7 +270,7 @@ export const UpdatePostResponse = zod.object({
   "id": zod.string(),
   "missionaryId": zod.string(),
   "missionaryName": zod.string(),
-  "missionaryCountry": zod.string(),
+  "missionaryCountry": zod.string().optional().describe('Omitted when the missionary hides their location.'),
   "type": zod.enum(['UPDATE', 'PRAYER_REQUEST', 'NEED']),
   "title": zod.string(),
   "content": zod.string(),

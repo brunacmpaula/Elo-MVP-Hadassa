@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { UserGender } from './userGender';
 import type { UserRole } from './userRole';
 
 export interface User {
@@ -12,4 +13,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  gender: UserGender;
+  /** Present for missionary accounts and resolved by the server. */
+  missionaryProfileId?: string;
 }

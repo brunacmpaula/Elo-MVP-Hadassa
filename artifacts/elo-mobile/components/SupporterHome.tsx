@@ -1,13 +1,40 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
-import { useListPosts } from '@workspace/api-client-react';
+import {
+  getListPostsQueryKey,
+  useListPosts,
+} from '@workspace/api-client-react';
 import { useColors } from '../hooks/useColors';
 import { PostCard } from './PostCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
+import {
+  hideCachedPostFields,
+  PUBLIC_PRIVACY_QUERY_OPTIONS,
+} from '../lib/privacy';
 
 export function SupporterHome() {
   const colors = useColors();
-  const { data: posts, isLoading, refetch, isRefetching } = useListPosts();
+  const {
+    data: posts,
+    isLoading,
+    isFetching,
+    refetch,
+    isRefetching,
+  } = useListPosts(undefined, {
+    query: {
+      ...PUBLIC_PRIVACY_QUERY_OPTIONS,
+      queryKey: getListPostsQueryKey(),
+    },
+  });
+  const visiblePosts = isFetching
+    ? posts?.map(hideCachedPostFields)
+    : posts;
+  useFocusEffect(
+    React.useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -19,7 +46,7 @@ export function SupporterHome() {
       </View>
 
       <FlatList
-        data={posts}
+        data={visiblePosts}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         refreshing={isRefetching}

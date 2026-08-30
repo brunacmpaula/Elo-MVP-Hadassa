@@ -1,14 +1,41 @@
 import React from 'react';
 import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useListMissionaries } from '@workspace/api-client-react';
+import {
+  getListMissionariesQueryKey,
+  useListMissionaries,
+} from '@workspace/api-client-react';
 import { useColors } from '../../hooks/useColors';
 import { MissionaryCard } from '../../components/MissionaryCard';
 import { FlatList } from 'react-native-gesture-handler';
+import { useFocusEffect } from 'expo-router';
+import {
+  hideCachedMissionaryFields,
+  PUBLIC_PRIVACY_QUERY_OPTIONS,
+} from '../../lib/privacy';
 
 export default function ExploreScreen() {
   const colors = useColors();
-  const { data: missionaries, isLoading, error } = useListMissionaries();
+  const {
+    data: missionaries,
+    isLoading,
+    isFetching,
+    refetch,
+    error,
+  } = useListMissionaries({
+    query: {
+      ...PUBLIC_PRIVACY_QUERY_OPTIONS,
+      queryKey: getListMissionariesQueryKey(),
+    },
+  });
+  const visibleMissionaries = isFetching
+    ? missionaries?.map(hideCachedMissionaryFields)
+    : missionaries;
+  useFocusEffect(
+    React.useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -29,7 +56,7 @@ export default function ExploreScreen() {
         </View>
       ) : (
         <FlatList
-          data={missionaries}
+          data={visibleMissionaries}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => <MissionaryCard missionary={item} />}

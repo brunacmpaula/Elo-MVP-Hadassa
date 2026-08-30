@@ -1,21 +1,37 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useGetMissionary, useFollowMissionary, useUnfollowMissionary, getGetMissionaryQueryKey } from '@workspace/api-client-react';
 import { useColors } from '../../hooks/useColors';
 import { Button } from '../../components/Button';
 import { PostCard } from '../../components/PostCard';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../../context/AuthContext';
+import {
+  hideCachedMissionaryProfileFields,
+  PUBLIC_PRIVACY_QUERY_OPTIONS,
+} from '../../lib/privacy';
 
 export default function MissionaryProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const queryClient = useQueryClient();
-  const { isMissionaryFieldVisible } = useAuth();
 
-  const { data: profile, isLoading } = useGetMissionary(id!);
+  const { data: profile, isLoading, isFetching, refetch } = useGetMissionary(id!, {
+    query: {
+      ...PUBLIC_PRIVACY_QUERY_OPTIONS,
+      queryKey: getGetMissionaryQueryKey(id!),
+    },
+  });
+  const visibleProfile =
+    profile && isFetching
+      ? hideCachedMissionaryProfileFields(profile)
+      : profile;
+  useFocusEffect(
+    React.useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
   const followMutation = useFollowMissionary();
   const unfollowMutation = useUnfollowMissionary();
 
@@ -33,7 +49,7 @@ export default function MissionaryProfileScreen() {
     }
   };
 
-  if (isLoading || !profile) {
+  if (isLoading || !visibleProfile) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} />
@@ -41,47 +57,44 @@ export default function MissionaryProfileScreen() {
     );
   }
 
-  const showLocation = isMissionaryFieldVisible(profile.id, 'location');
-  const showBio = isMissionaryFieldVisible(profile.id, 'bio');
-
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <View style={[styles.avatar, { backgroundColor: colors.secondary }]}>
           <Text style={[styles.avatarText, { color: colors.secondaryForeground }]}>
-            {profile.initials}
+            {visibleProfile.initials}
           </Text>
         </View>
-        <Text style={[styles.name, { color: colors.foreground }]}>{profile.name}</Text>
-        {showLocation && (
+        <Text style={[styles.name, { color: colors.foreground }]}>{visibleProfile.name}</Text>
+        {visibleProfile.country && (
           <View style={styles.location}>
             <Feather name="map-pin" size={14} color={colors.mutedForeground} />
-            <Text style={[styles.country, { color: colors.mutedForeground }]}>{profile.country}</Text>
+            <Text style={[styles.country, { color: colors.mutedForeground }]}>{visibleProfile.country}</Text>
           </View>
         )}
         
         <View style={styles.actions}>
           <Button
-            title={profile.isFollowed ? 'Apoiando' : 'Apoiar em Oração'}
-            icon={profile.isFollowed ? 'check' : 'heart'}
-            variant={profile.isFollowed ? 'secondary' : 'primary'}
+            title={visibleProfile.isFollowed ? 'Apoiando' : 'Apoiar em Oração'}
+            icon={visibleProfile.isFollowed ? 'check' : 'heart'}
+            variant={visibleProfile.isFollowed ? 'secondary' : 'primary'}
             onPress={handleFollow}
           />
         </View>
 
-        {showBio && (
-          <Text style={[styles.bio, { color: colors.foreground }]}>{profile.bio}</Text>
+        {visibleProfile.bio && (
+          <Text style={[styles.bio, { color: colors.foreground }]}>{visibleProfile.bio}</Text>
         )}
       </View>
 
       <View style={styles.posts}>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Diário do Campo</Text>
-        {profile.posts.length === 0 ? (
+        {visibleProfile.posts.length === 0 ? (
           <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
             Nenhuma publicação ainda.
           </Text>
         ) : (
-          profile.posts.map((post) => (
+          visibleProfile.posts.map((post) => (
             <PostCard key={post.id} post={post} />
           ))
         )}

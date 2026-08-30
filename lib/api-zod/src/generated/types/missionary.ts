@@ -11,8 +11,12 @@ export interface Missionary {
   id: string;
   userId: string;
   name: string;
-  bio: string;
-  country: string;
+  /** Omitted when the missionary hides their email address. */
+  email?: string;
+  /** Omitted when the missionary hides their biography. */
+  bio?: string;
+  /** Omitted when the missionary hides their location. */
+  country?: string;
   initials: string;
   isFollowed: boolean;
   /** @nullable */

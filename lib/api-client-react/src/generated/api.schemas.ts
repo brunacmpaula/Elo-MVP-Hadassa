@@ -23,11 +23,22 @@ export const UserRole = {
   SUPPORTER: 'SUPPORTER',
 } as const;
 
+export type UserGender = typeof UserGender[keyof typeof UserGender];
+
+
+export const UserGender = {
+  FEMALE: 'FEMALE',
+  MALE: 'MALE',
+} as const;
+
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  gender: UserGender;
+  /** Present for missionary accounts and resolved by the server. */
+  missionaryProfileId?: string;
 }
 
 export interface Session {
@@ -51,8 +62,12 @@ export interface Missionary {
   id: string;
   userId: string;
   name: string;
-  bio: string;
-  country: string;
+  /** Omitted when the missionary hides their email address. */
+  email?: string;
+  /** Omitted when the missionary hides their biography. */
+  bio?: string;
+  /** Omitted when the missionary hides their location. */
+  country?: string;
   initials: string;
   isFollowed: boolean;
   /** @nullable */
@@ -82,7 +97,8 @@ export interface Post {
   id: string;
   missionaryId: string;
   missionaryName: string;
-  missionaryCountry: string;
+  /** Omitted when the missionary hides their location. */
+  missionaryCountry?: string;
   type: PostType;
   title: string;
   content: string;
@@ -97,6 +113,20 @@ export interface Post {
 export type MissionaryProfile = Missionary & {
   posts: Post[];
 };
+
+export type ProfilePreferencesHiddenFieldsItem = typeof ProfilePreferencesHiddenFieldsItem[keyof typeof ProfilePreferencesHiddenFieldsItem];
+
+
+export const ProfilePreferencesHiddenFieldsItem = {
+  email: 'email',
+  location: 'location',
+  bio: 'bio',
+} as const;
+
+export interface ProfilePreferences {
+  hiddenFields: ProfilePreferencesHiddenFieldsItem[];
+  womenOnlyNotifications: boolean;
+}
 
 export type PostInputType = typeof PostInputType[keyof typeof PostInputType];
 

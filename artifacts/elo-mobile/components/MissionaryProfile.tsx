@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { useAuth, type ProfileField } from '../context/AuthContext';
 import { useColors } from '../hooks/useColors';
 import { Button } from './Button';
@@ -63,9 +64,18 @@ export function MissionaryProfile() {
   const {
     user,
     profilePreferences,
+    refreshProfilePreferences,
     setWomenOnlyNotifications,
     logout,
   } = useAuth();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshProfilePreferences().catch(() => {
+        // Keep the last server-confirmed value when temporarily offline.
+      });
+    }, [user?.id]),
+  );
 
   if (!user) return null;
 

@@ -30,6 +30,7 @@ import type {
   PostInput,
   PostUpdate,
   PrayerState,
+  ProfilePreferences,
   Session,
   SyncInput,
   SyncResult
@@ -166,7 +167,7 @@ export const login = async (loginInput: LoginInput, options?: Parameters<typeof 
 
 
 
-export const getLoginMutationOptions = <TError = ErrorType<unknown>,
+export const getLoginMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginInput>}, TContext> => {
 
@@ -195,12 +196,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>
     export type LoginMutationBody = BodyType<LoginInput>
-    export type LoginMutationError = ErrorType<unknown>
+    export type LoginMutationError = ErrorType<void>
 
     /**
  * @summary Start a demo session
  */
-export const useLogin = <TError = ErrorType<unknown>,
+export const useLogin = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<LoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof login>>,
@@ -364,6 +365,155 @@ export function useGetMissionary<TData = Awaited<ReturnType<typeof getMissionary
 
 
 
+
+export const getGetMissionaryPreferencesUrl = (missionaryId: string,) => {
+
+
+
+
+  return `/api/missionaries/${missionaryId}/preferences`
+}
+
+/**
+ * @summary Get the authenticated missionary's visibility preferences
+ */
+export const getMissionaryPreferences = async (missionaryId: string, options?: Parameters<typeof customFetch>[1]): Promise<ProfilePreferences> => {
+
+  return customFetch<ProfilePreferences>(getGetMissionaryPreferencesUrl(missionaryId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMissionaryPreferencesQueryKey = (missionaryId: string,) => {
+    return [
+    `/api/missionaries/${missionaryId}/preferences`
+    ] as const;
+    }
+
+
+export const getGetMissionaryPreferencesQueryOptions = <TData = Awaited<ReturnType<typeof getMissionaryPreferences>>, TError = ErrorType<void>>(missionaryId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMissionaryPreferences>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMissionaryPreferencesQueryKey(missionaryId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMissionaryPreferences>>> = ({ signal }) => getMissionaryPreferences(missionaryId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: missionaryId !== null && missionaryId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMissionaryPreferences>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMissionaryPreferencesQueryResult = NonNullable<Awaited<ReturnType<typeof getMissionaryPreferences>>>
+export type GetMissionaryPreferencesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the authenticated missionary's visibility preferences
+ */
+
+export function useGetMissionaryPreferences<TData = Awaited<ReturnType<typeof getMissionaryPreferences>>, TError = ErrorType<void>>(
+ missionaryId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMissionaryPreferences>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMissionaryPreferencesQueryOptions(missionaryId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateMissionaryPreferencesUrl = (missionaryId: string,) => {
+
+
+
+
+  return `/api/missionaries/${missionaryId}/preferences`
+}
+
+/**
+ * @summary Update the authenticated missionary's visibility preferences
+ */
+export const updateMissionaryPreferences = async (missionaryId: string,
+    profilePreferences: ProfilePreferences, options?: Parameters<typeof customFetch>[1]): Promise<ProfilePreferences> => {
+
+  return customFetch<ProfilePreferences>(getUpdateMissionaryPreferencesUrl(missionaryId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(profilePreferences)
+  }
+);}
+
+
+
+
+
+export const getUpdateMissionaryPreferencesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMissionaryPreferences>>, TError,{missionaryId: string;data: BodyType<ProfilePreferences>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMissionaryPreferences>>, TError,{missionaryId: string;data: BodyType<ProfilePreferences>}, TContext> => {
+
+const mutationKey = ['updateMissionaryPreferences'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMissionaryPreferences>>, {missionaryId: string;data: BodyType<ProfilePreferences>}> = (props) => {
+          const {missionaryId,data} = props ?? {};
+
+          return  updateMissionaryPreferences(missionaryId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMissionaryPreferencesMutationResult = NonNullable<Awaited<ReturnType<typeof updateMissionaryPreferences>>>
+    export type UpdateMissionaryPreferencesMutationBody = BodyType<ProfilePreferences>
+    export type UpdateMissionaryPreferencesMutationError = ErrorType<void>
+
+    /**
+ * @summary Update the authenticated missionary's visibility preferences
+ */
+export const useUpdateMissionaryPreferences = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMissionaryPreferences>>, TError,{missionaryId: string;data: BodyType<ProfilePreferences>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMissionaryPreferences>>,
+        TError,
+        {missionaryId: string;data: BodyType<ProfilePreferences>},
+        TContext
+      > => {
+      return useMutation(getUpdateMissionaryPreferencesMutationOptions(options));
+    }
 
 export const getFollowMissionaryUrl = (missionaryId: string,) => {
 
@@ -617,7 +767,7 @@ export const createPost = async (postInput: PostInput, options?: Parameters<type
 
 
 
-export const getCreatePostMutationOptions = <TError = ErrorType<unknown>,
+export const getCreatePostMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,{data: BodyType<PostInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,{data: BodyType<PostInput>}, TContext> => {
 
@@ -646,12 +796,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreatePostMutationResult = NonNullable<Awaited<ReturnType<typeof createPost>>>
     export type CreatePostMutationBody = BodyType<PostInput>
-    export type CreatePostMutationError = ErrorType<unknown>
+    export type CreatePostMutationError = ErrorType<void>
 
     /**
  * @summary Create a missionary post
  */
-export const useCreatePost = <TError = ErrorType<unknown>,
+export const useCreatePost = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,{data: BodyType<PostInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createPost>>,
@@ -766,7 +916,7 @@ export const updatePost = async (postId: string,
 
 
 
-export const getUpdatePostMutationOptions = <TError = ErrorType<unknown>,
+export const getUpdatePostMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePost>>, TError,{postId: string;data: BodyType<PostUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updatePost>>, TError,{postId: string;data: BodyType<PostUpdate>}, TContext> => {
 
@@ -795,12 +945,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdatePostMutationResult = NonNullable<Awaited<ReturnType<typeof updatePost>>>
     export type UpdatePostMutationBody = BodyType<PostUpdate>
-    export type UpdatePostMutationError = ErrorType<unknown>
+    export type UpdatePostMutationError = ErrorType<void>
 
     /**
  * @summary Edit a missionary post
  */
-export const useUpdatePost = <TError = ErrorType<unknown>,
+export const useUpdatePost = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePost>>, TError,{postId: string;data: BodyType<PostUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updatePost>>,
@@ -979,7 +1129,7 @@ export const syncOperations = async (syncInput: SyncInput, options?: Parameters<
 
 
 
-export const getSyncOperationsMutationOptions = <TError = ErrorType<unknown>,
+export const getSyncOperationsMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncOperations>>, TError,{data: BodyType<SyncInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof syncOperations>>, TError,{data: BodyType<SyncInput>}, TContext> => {
 
@@ -1008,12 +1158,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type SyncOperationsMutationResult = NonNullable<Awaited<ReturnType<typeof syncOperations>>>
     export type SyncOperationsMutationBody = BodyType<SyncInput>
-    export type SyncOperationsMutationError = ErrorType<unknown>
+    export type SyncOperationsMutationError = ErrorType<void>
 
     /**
  * @summary Process idempotent offline operations
  */
-export const useSyncOperations = <TError = ErrorType<unknown>,
+export const useSyncOperations = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncOperations>>, TError,{data: BodyType<SyncInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof syncOperations>>,
