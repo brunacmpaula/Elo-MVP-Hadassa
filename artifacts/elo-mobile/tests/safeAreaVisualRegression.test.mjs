@@ -207,6 +207,9 @@ const screenScenarios = [
     bottomClearance: (device) => device.insets.bottom + 24,
     required: [
       'useAppSafeAreaInsets',
+      'KeyboardAwareScrollViewCompat',
+      'bottomOffset={16}',
+      'extraKeyboardSpace={Math.max(bottom, 24)}',
       'contentContainerStyle={{ paddingBottom: bottom + 24 }}',
       'testID="post-detail-screen"',
       'testID="pray-for-post"',

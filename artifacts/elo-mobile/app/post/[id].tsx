@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image, TextInput } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   useCreatePostComment,
@@ -25,6 +25,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useOfflineMode } from '../../context/OfflineContext';
 import { useSync } from '../../context/SyncContext';
+import { KeyboardAwareScrollViewCompat } from '../../components/KeyboardAwareScrollViewCompat';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -206,9 +207,12 @@ export default function PostDetailScreen() {
   }
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollViewCompat
       testID="post-detail-screen"
       style={[styles.container, { backgroundColor: colors.background }]}
+      bottomOffset={16}
+      extraKeyboardSpace={Math.max(bottom, 24)}
+      keyboardDismissMode="on-drag"
       contentInsetAdjustmentBehavior="never"
       contentContainerStyle={{ paddingBottom: bottom + 24 }}
     >
@@ -419,7 +423,7 @@ export default function PostDetailScreen() {
           </View>
         )}
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollViewCompat>
   );
 }
 
