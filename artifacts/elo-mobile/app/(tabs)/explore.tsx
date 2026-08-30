@@ -23,7 +23,7 @@ import { MissionaryCard } from '../../components/MissionaryCard';
 import { FlatList } from 'react-native-gesture-handler';
 import { useFocusEffect } from 'expo-router';
 import {
-  hideCachedMissionaryFields,
+  getVisibleMissionaries,
   PUBLIC_PRIVACY_QUERY_OPTIONS,
 } from '../../lib/privacy';
 import { filterMissionaries, normalizeSearchText } from '../../lib/search';
@@ -45,9 +45,7 @@ export default function ExploreScreen() {
       queryKey: getListMissionariesQueryKey(),
     },
   });
-  const visibleMissionaries = isFetching
-    ? missionaries?.map(hideCachedMissionaryFields)
-    : missionaries;
+  const visibleMissionaries = getVisibleMissionaries(missionaries, isFetching);
   const normalizedSearchQuery = normalizeSearchText(searchQuery);
   const filteredMissionaries = React.useMemo(() => {
     return filterMissionaries(visibleMissionaries ?? [], searchQuery);

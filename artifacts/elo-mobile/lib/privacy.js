@@ -14,6 +14,11 @@ export function hideCachedMissionaryFields(missionary) {
   return safeMissionary;
 }
 
+export function getVisibleMissionaries(missionaries, isFetching) {
+  if (!missionaries) return missionaries;
+  return isFetching ? missionaries.map(hideCachedMissionaryFields) : missionaries;
+}
+
 export function hideCachedPostFields(post) {
   const { missionaryCountry: _country, ...safePost } = post;
   return safePost;

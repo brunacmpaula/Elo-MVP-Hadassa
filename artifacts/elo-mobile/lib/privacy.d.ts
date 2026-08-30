@@ -14,6 +14,11 @@ export function hideCachedMissionaryFields(
   missionary: Missionary,
 ): Missionary;
 
+export function getVisibleMissionaries(
+  missionaries: Missionary[] | undefined,
+  isFetching: boolean,
+): Missionary[] | undefined;
+
 export function hideCachedPostFields(post: Post): Post;
 
 export function hideCachedMissionaryProfileFields(

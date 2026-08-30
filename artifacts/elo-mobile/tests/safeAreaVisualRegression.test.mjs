@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { getVisibleMissionaries } from '../lib/privacy.js';
 import { filterMissionaries } from '../lib/search.js';
 
 const testsDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -412,6 +413,7 @@ test('keeps Explore search local, accessible, accent-insensitive, and privacy-aw
   assert.match(sources.explore, /useState<string>\(''\)/);
   assert.match(sources.explore, /filterMissionaries, normalizeSearchText/);
   assert.match(sources.explore, /from '\.\.\/\.\.\/lib\/search'/);
+  assert.match(sources.explore, /getVisibleMissionaries\(missionaries, isFetching\)/);
   assert.match(sources.explore, /visibleMissionaries \?\? \[\]/);
   assert.match(sources.explore, /placeholder="Buscar por nome ou região"/);
   assert.match(sources.explore, /accessibilityLabel="Buscar missionários por nome ou região"/);
@@ -423,6 +425,67 @@ test('keeps Explore search local, accessible, accent-insensitive, and privacy-aw
   assert.match(sources.explore, /paddingBottom: listBottomPadding/);
   assert.match(sources.explore, /Nenhum missionário encontrado\./);
   assert.match(sources.explore, /Tente buscar por outro nome ou região\./);
+});
+
+test('keeps Explore results usable and privacy-safe through a periodic refresh', () => {
+  const cachedMissionaries = [
+    {
+      id: 'missionary-ana',
+      userId: 'user-ana',
+      name: 'Ana Silva',
+      email: 'ana@elo.demo',
+      bio: 'Biografia em cache',
+      country: 'Moçambique',
+      initials: 'AS',
+      isFollowed: false,
+      latestPostType: 'UPDATE',
+    },
+    {
+      id: 'missionary-joao',
+      userId: 'user-joao',
+      name: 'João Santos',
+      email: 'joao@elo.demo',
+      bio: 'Outra biografia em cache',
+      country: 'Brasil',
+      initials: 'JS',
+      isFollowed: true,
+      latestPostType: 'PRAYER_REQUEST',
+    },
+  ];
+  const refreshedMissionaries = cachedMissionaries.map((missionary) => ({
+    ...missionary,
+    email: undefined,
+    bio: undefined,
+  }));
+
+  const duringRefresh = getVisibleMissionaries(cachedMissionaries, true);
+  assert.ok(duringRefresh);
+  assert.deepEqual(
+    duringRefresh.map(({ id }) => id),
+    cachedMissionaries.map(({ id }) => id),
+    'cached rows must remain available for navigation while the request is in flight',
+  );
+  assert.equal('country' in duringRefresh[0], false);
+  assert.equal('email' in duringRefresh[0], false);
+  assert.equal('bio' in duringRefresh[0], false);
+  assert.deepEqual(
+    filterMissionaries(duringRefresh, 'Ana Silva'),
+    [duringRefresh[0]],
+    'search must continue to use public names during refresh',
+  );
+  assert.deepEqual(
+    filterMissionaries(duringRefresh, 'Moçambique'),
+    [],
+    'search must not use a cached private location during refresh',
+  );
+
+  const afterRefresh = getVisibleMissionaries(refreshedMissionaries, false);
+  assert.deepEqual(
+    filterMissionaries(afterRefresh, 'mocambique'),
+    [afterRefresh[0]],
+    'a public location returned by the completed refresh must be searchable again',
+  );
+  assert.equal(afterRefresh[0].country, 'Moçambique');
 });
 
 test('filters real missionary data through the Explore search interaction', () => {
