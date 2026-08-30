@@ -4,10 +4,16 @@ import { Missionary } from '@workspace/api-client-react';
 import { useColors } from '../hooks/useColors';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../context/AuthContext';
 
 export function MissionaryCard({ missionary }: { missionary: Missionary }) {
   const colors = useColors();
   const router = useRouter();
+  const { isMissionaryFieldVisible } = useAuth();
+  const showLocation = isMissionaryFieldVisible(
+    missionary.id,
+    'location',
+  );
 
   return (
     <Pressable
@@ -29,12 +35,14 @@ export function MissionaryCard({ missionary }: { missionary: Missionary }) {
         </View>
         <View style={styles.info}>
           <Text style={[styles.name, { color: colors.foreground }]}>{missionary.name}</Text>
-          <View style={styles.location}>
-            <Feather name="map-pin" size={12} color={colors.mutedForeground} />
-            <Text style={[styles.country, { color: colors.mutedForeground }]}>
-              {missionary.country}
-            </Text>
-          </View>
+          {showLocation && (
+            <View style={styles.location}>
+              <Feather name="map-pin" size={12} color={colors.mutedForeground} />
+              <Text style={[styles.country, { color: colors.mutedForeground }]}>
+                {missionary.country}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
       <Feather name="chevron-right" size={20} color={colors.mutedForeground} />

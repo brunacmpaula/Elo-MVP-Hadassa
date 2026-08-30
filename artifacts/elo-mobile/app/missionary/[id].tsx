@@ -7,11 +7,13 @@ import { Button } from '../../components/Button';
 import { PostCard } from '../../components/PostCard';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../../context/AuthContext';
 
 export default function MissionaryProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const queryClient = useQueryClient();
+  const { isMissionaryFieldVisible } = useAuth();
 
   const { data: profile, isLoading } = useGetMissionary(id!);
   const followMutation = useFollowMissionary();
@@ -39,6 +41,9 @@ export default function MissionaryProfileScreen() {
     );
   }
 
+  const showLocation = isMissionaryFieldVisible(profile.id, 'location');
+  const showBio = isMissionaryFieldVisible(profile.id, 'bio');
+
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
@@ -48,10 +53,12 @@ export default function MissionaryProfileScreen() {
           </Text>
         </View>
         <Text style={[styles.name, { color: colors.foreground }]}>{profile.name}</Text>
-        <View style={styles.location}>
-          <Feather name="map-pin" size={14} color={colors.mutedForeground} />
-          <Text style={[styles.country, { color: colors.mutedForeground }]}>{profile.country}</Text>
-        </View>
+        {showLocation && (
+          <View style={styles.location}>
+            <Feather name="map-pin" size={14} color={colors.mutedForeground} />
+            <Text style={[styles.country, { color: colors.mutedForeground }]}>{profile.country}</Text>
+          </View>
+        )}
         
         <View style={styles.actions}>
           <Button
@@ -62,7 +69,9 @@ export default function MissionaryProfileScreen() {
           />
         </View>
 
-        <Text style={[styles.bio, { color: colors.foreground }]}>{profile.bio}</Text>
+        {showBio && (
+          <Text style={[styles.bio, { color: colors.foreground }]}>{profile.bio}</Text>
+        )}
       </View>
 
       <View style={styles.posts}>
