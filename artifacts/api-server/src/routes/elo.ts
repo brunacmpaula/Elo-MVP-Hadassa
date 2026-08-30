@@ -38,6 +38,7 @@ import {
   contributionAvailabilitiesTable,
   contributionAvailabilityFeedbackTable,
   db,
+  getDemoPostSeeds,
   missionaryFollowsTable,
   postsTable,
   profilePreferencesTable,
@@ -165,69 +166,21 @@ const missionaries: Missionary[] = [
   },
 ];
 
-const now = new Date().toISOString();
-const defaultPosts: Post[] = [
-  {
-    id: "post-community-kits",
-    clientOperationId: "seed-post-community-kits",
-    missionaryId: "missionary-ana",
-    missionaryName: "Ana Silva",
-    missionaryCountry: "Moçambique",
-    type: "NEED",
-    title: "Kits de cuidado para novas famílias",
-    content:
-      "Precisamos de pessoas disponíveis para conversar sobre formas de apoiar a montagem e a entrega dos próximos kits.",
-    status: "PUBLISHED",
-    createdAt: now,
-    updatedAt: now,
-    prayerCount: 7,
+function demoPostToPost(
+  seed: ReturnType<typeof getDemoPostSeeds>[number],
+): Post {
+  const timestamp = seed.createdAt.toISOString();
+  return {
+    ...seed,
+    createdAt: timestamp,
+    updatedAt: seed.updatedAt.toISOString(),
     prayedByMe: false,
     missionarySaved: false,
     contributionFeedback: null,
-    media: [],
-    comments: [],
-  },
-  {
-    id: "post-prayer-team",
-    clientOperationId: "seed-post-prayer-team",
-    missionaryId: "missionary-ana",
-    missionaryName: "Ana Silva",
-    missionaryCountry: "Moçambique",
-    type: "PRAYER_REQUEST",
-    title: "Ore pela nossa equipe esta semana",
-    content:
-      "Estamos visitando novas comunidades e precisamos de sabedoria, saúde e boas conversas em cada encontro.",
-    status: "PUBLISHED",
-    createdAt: now,
-    updatedAt: now,
-    prayerCount: 42,
-    prayedByMe: false,
-    missionarySaved: false,
-    contributionFeedback: null,
-    media: [],
-    comments: [],
-  },
-  {
-    id: "post-school",
-    clientOperationId: "seed-post-school",
-    missionaryId: "missionary-joao",
-    missionaryName: "João Santos",
-    missionaryCountry: "Brasil",
-    type: "UPDATE",
-    title: "Uma nova turma começou",
-    content:
-      "Recebemos doze alunos para um novo ciclo de acompanhamento. Obrigado por caminhar conosco.",
-    status: "PUBLISHED",
-    createdAt: now,
-    updatedAt: now,
-    prayerCount: 18,
-    prayedByMe: false,
-    missionarySaved: false,
-    contributionFeedback: null,
-    media: [],
-    comments: [],
-  },
-];
+  };
+}
+
+const defaultPosts: Post[] = getDemoPostSeeds().map(demoPostToPost);
 
 let posts: Post[] = [];
 const processedOperations = new Map<string, string>();
@@ -375,16 +328,14 @@ async function ensurePostsLoaded() {
       .from(postsTable)
       .orderBy(desc(postsTable.createdAt), desc(postsTable.id));
 
-    if (records.length === 0) {
-      await db
-        .insert(postsTable)
-        .values(defaultPosts.map(postValues))
-        .onConflictDoNothing();
-      records = await db
-        .select()
-        .from(postsTable)
-        .orderBy(desc(postsTable.createdAt), desc(postsTable.id));
-    }
+    await db
+      .insert(postsTable)
+      .values(defaultPosts.map(postValues))
+      .onConflictDoNothing();
+    records = await db
+      .select()
+      .from(postsTable)
+      .orderBy(desc(postsTable.createdAt), desc(postsTable.id));
 
     posts = records.map(postFromRecord);
     processedOperations.clear();

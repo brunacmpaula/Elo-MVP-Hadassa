@@ -58,6 +58,101 @@ async function login(email) {
   return body.token;
 }
 
+function decodedDataUrlBytes(uri) {
+  const match = /^data:image\/(?:jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(
+    uri,
+  );
+  assert.ok(match, "expected a base64 image data URL");
+  return Buffer.from(match[1], "base64").byteLength;
+}
+
+test("keeps the demonstration need and image update available after restart", async (t) => {
+  let server = startServer();
+  t.after(async () => stopServer(server));
+  await waitForServer(server);
+
+  const supporterToken = await login("bruno@elo.demo");
+  const missionaryToken = await login("joao@elo.demo");
+  const authenticatedHeaders = {
+    authorization: `Bearer ${supporterToken}`,
+  };
+  const missionaryHeaders = {
+    authorization: `Bearer ${missionaryToken}`,
+  };
+
+  const firstFeed = await jsonRequest("/posts", {
+    headers: authenticatedHeaders,
+  });
+  assert.equal(firstFeed.response.status, 200);
+  const firstNeed = firstFeed.body.find(
+    (post) => post.id === "post-community-garden",
+  );
+  const firstUpdate = firstFeed.body.find(
+    (post) => post.id === "post-reading-room",
+  );
+  assert.ok(firstNeed, "the demonstration need should be in the supporter feed");
+  assert.equal(firstNeed.type, "NEED");
+  assert.equal(firstNeed.title, "Mãos para a horta comunitária");
+  assert.equal(firstNeed.status, "PUBLISHED");
+  assert.equal(firstNeed.media.length, 0);
+  assert.ok(firstNeed.prayerCount > 0);
+  assert.ok(firstNeed.createdAt);
+
+  assert.ok(
+    firstUpdate,
+    "the demonstration image update should be in the supporter feed",
+  );
+  assert.equal(firstUpdate.type, "UPDATE");
+  assert.equal(firstUpdate.title, "A sala de leitura ganhou vida");
+  assert.equal(firstUpdate.status, "PUBLISHED");
+  assert.equal(firstUpdate.media.length, 1);
+  const media = firstUpdate.media[0];
+  assert.equal(media.id, "media-demo-reading-room");
+  assert.equal(media.clientMediaId, "demo-reading-room");
+  assert.equal(media.mimeType, "image/png");
+  assert.equal(media.width, 684);
+  assert.equal(media.height, 666);
+  assert.equal(media.sizeBytes, decodedDataUrlBytes(media.uri));
+  assert.ok(media.sizeBytes < 1_500_000);
+  assert.ok(decodedDataUrlBytes(media.thumbnailUri) > 0);
+
+  const missionaryFeed = await jsonRequest("/posts", {
+    headers: missionaryHeaders,
+  });
+  assert.equal(missionaryFeed.response.status, 200);
+  assert.ok(
+    missionaryFeed.body.some((post) => post.id === firstNeed.id),
+    "the missionary account should see the demonstration need",
+  );
+  assert.ok(
+    missionaryFeed.body.some((post) => post.id === firstUpdate.id),
+    "the missionary account should see the demonstration update",
+  );
+
+  await stopServer(server);
+  server = startServer();
+  await waitForServer(server);
+
+  const secondFeed = await jsonRequest("/posts", {
+    headers: authenticatedHeaders,
+  });
+  assert.equal(secondFeed.response.status, 200);
+  assert.equal(
+    secondFeed.body.filter((post) => post.id === "post-community-garden").length,
+    1,
+  );
+  assert.equal(
+    secondFeed.body.filter((post) => post.id === "post-reading-room").length,
+    1,
+  );
+  const secondUpdate = secondFeed.body.find(
+    (post) => post.id === "post-reading-room",
+  );
+  assert.equal(secondUpdate.media[0].id, media.id);
+  assert.equal(secondUpdate.media[0].uri, media.uri);
+  assert.equal(secondUpdate.media[0].thumbnailUri, media.thumbnailUri);
+});
+
 test("a need and its availability survive an API restart", async (t) => {
   let server = startServer();
   t.after(async () => stopServer(server));
