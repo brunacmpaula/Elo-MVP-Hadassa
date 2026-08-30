@@ -247,9 +247,9 @@ test("preferences persist and redact public profile data", async (t) => {
       headers: missionaryHeaders,
       body: JSON.stringify({
         missionaryId: "missionary-joao",
-        type: "UPDATE",
-        title: "Publicação do perfil autenticado",
-        content: "O payload não pode trocar a identidade da missão",
+        type: "NEED",
+        title: "Necessidade do perfil autenticado",
+        content: "Esta necessidade deve aparecer no feed do apoiador",
         clientOperationId: "privacy-test-owner-create",
       }),
     });
@@ -278,6 +278,10 @@ test("preferences persist and redact public profile data", async (t) => {
     assert.equal(
       supporterFeed.body.some((post) => post.id === ownerCreate.body.id),
       true,
+    );
+    assert.equal(
+      supporterFeed.body.find((post) => post.id === ownerCreate.body.id)?.type,
+      "NEED",
     );
     assert.equal(
       otherMissionaryFeed.body.some((post) => post.id === ownerCreate.body.id),

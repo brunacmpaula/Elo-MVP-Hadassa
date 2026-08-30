@@ -17,6 +17,8 @@ import {
   PUBLIC_PRIVACY_QUERY_OPTIONS,
 } from '../lib/privacy';
 
+const FEED_REFRESH_INTERVAL_MS = 10_000;
+
 export function SupporterHome() {
   const colors = useColors();
   const listBottomPadding = useTabContentBottomPadding(100, 'automatic');
@@ -31,6 +33,8 @@ export function SupporterHome() {
     query: {
       ...PUBLIC_PRIVACY_QUERY_OPTIONS,
       queryKey: getListPostsQueryKey(),
+      refetchInterval: FEED_REFRESH_INTERVAL_MS,
+      refetchIntervalInBackground: false,
     },
   });
   const visiblePosts = isFetching ? posts?.map(hideCachedPostFields) : posts;
