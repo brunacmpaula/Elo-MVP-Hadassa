@@ -97,6 +97,7 @@ export default function PostDetailScreen() {
 
   return (
     <ScrollView
+      testID="post-detail-screen"
       style={[styles.container, { backgroundColor: colors.background }]}
       contentInsetAdjustmentBehavior="never"
       contentContainerStyle={{ paddingBottom: bottom + 24 }}
@@ -151,6 +152,7 @@ export default function PostDetailScreen() {
           variant={visiblePost.prayedByMe ? 'wine' : 'secondary'}
           fullWidth
           onPress={handlePray}
+          testID="pray-for-post"
         />
       </View>
 

@@ -45,6 +45,7 @@ export default function ExploreScreen() {
 
   return (
     <AppSafeAreaView
+      testID="explore-screen"
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >

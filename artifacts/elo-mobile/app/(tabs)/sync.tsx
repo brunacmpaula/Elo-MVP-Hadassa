@@ -31,6 +31,7 @@ export default function SyncQueueScreen() {
 
   return (
     <AppSafeAreaView
+      testID="sync-queue-screen"
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >
@@ -149,6 +150,7 @@ export default function SyncQueueScreen() {
           onPress={syncNow}
           disabled={queue.length === 0 || isSyncing}
           loading={isSyncing}
+          testID="sync-now"
         />
       </View>
     </AppSafeAreaView>

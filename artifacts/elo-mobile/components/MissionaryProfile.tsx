@@ -137,6 +137,7 @@ export function MissionaryProfile() {
 
   return (
     <AppSafeAreaView
+      testID="missionary-profile-screen"
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >
@@ -316,6 +317,7 @@ export function MissionaryProfile() {
           fullWidth
           onPress={logout}
           accessibilityLabel="Sair da conta"
+          testID="missionary-logout"
         />
       </View>
     </AppSafeAreaView>

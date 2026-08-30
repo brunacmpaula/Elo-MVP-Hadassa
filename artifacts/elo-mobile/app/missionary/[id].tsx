@@ -70,6 +70,7 @@ export default function MissionaryProfileScreen() {
 
   return (
     <ScrollView
+      testID="missionary-detail-screen"
       style={[styles.container, { backgroundColor: colors.background }]}
       contentInsetAdjustmentBehavior="never"
       contentContainerStyle={{ paddingBottom: bottom + 24 }}
@@ -96,6 +97,7 @@ export default function MissionaryProfileScreen() {
                 icon={visibleProfile.isFollowed ? 'check' : 'bookmark'}
                 variant={visibleProfile.isFollowed ? 'secondary' : 'primary'}
                 onPress={handleFollow}
+                testID="follow-missionary"
               />
               <Button
                 title="Contribuir"

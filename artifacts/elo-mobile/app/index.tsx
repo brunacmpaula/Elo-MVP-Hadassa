@@ -13,7 +13,10 @@ export default function LoginScreen() {
 
   if (isLoading) {
     return (
-      <AppSafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppSafeAreaView
+        testID="login-screen"
+        style={[styles.container, { backgroundColor: colors.background }]}
+      >
         <View style={styles.center}>
           <Feather name="loader" size={24} color={colors.primary} />
         </View>
@@ -50,6 +53,7 @@ export default function LoginScreen() {
             icon="send"
             fullWidth
             onPress={() => loginAs('MISSIONARY')}
+            testID="login-as-missionary"
           />
           
           <Button
@@ -58,6 +62,7 @@ export default function LoginScreen() {
             variant="outline"
             fullWidth
             onPress={() => loginAs('SUPPORTER')}
+            testID="login-as-supporter"
           />
         </View>
       </View>

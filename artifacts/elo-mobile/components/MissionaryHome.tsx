@@ -40,6 +40,7 @@ export function MissionaryHome() {
 
   return (
     <AppSafeAreaView
+      testID="missionary-home-screen"
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >
@@ -51,6 +52,7 @@ export function MissionaryHome() {
             icon="plus"
             size="sm"
             onPress={() => setIsComposeOpen(true)}
+            testID="open-compose-post"
           />
         </View>
 

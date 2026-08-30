@@ -20,6 +20,7 @@ export function SupporterProfile() {
 
   return (
     <AppSafeAreaView
+      testID="supporter-profile-screen"
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >
@@ -40,7 +41,14 @@ export function SupporterProfile() {
         <Text style={[styles.hint, { color: colors.mutedForeground }]}>
           Missionários salvos e comentários ficam vinculados somente a esta conta.
         </Text>
-        <Button title="Sair da conta" icon="log-out" variant="outline" fullWidth onPress={logout} />
+        <Button
+          title="Sair da conta"
+          icon="log-out"
+          variant="outline"
+          fullWidth
+          onPress={logout}
+          testID="supporter-logout"
+        />
       </ScrollView>
     </AppSafeAreaView>
   );

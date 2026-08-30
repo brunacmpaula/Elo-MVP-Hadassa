@@ -139,6 +139,7 @@ export function ComposePostModal({
           style={styles.keyboardArea}
         >
           <View
+            testID="compose-post-sheet"
             style={[
               styles.sheet,
               {
@@ -163,6 +164,7 @@ export function ComposePostModal({
                 size="sm"
                 onPress={resetAndClose}
                 accessibilityLabel="Fechar"
+                testID="close-compose-post"
               />
             </View>
 
@@ -334,6 +336,7 @@ export function ComposePostModal({
                 onPress={handleSubmit}
                 disabled={!title.trim() || !content.trim() || isSubmitting}
                 loading={isSubmitting}
+                testID="save-post"
               />
             </ScrollView>
           </View>

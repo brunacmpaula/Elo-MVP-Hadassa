@@ -44,6 +44,7 @@ export function SupporterHome() {
 
   return (
     <AppSafeAreaView
+      testID="supporter-home-screen"
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={['top']}
     >

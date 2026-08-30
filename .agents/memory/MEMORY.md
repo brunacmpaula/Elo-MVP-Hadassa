@@ -1,2 +1,3 @@
 - [OpenAPI Zod compatibility](openapi-zod-compatibility.md) — avoid generated Zod v4-only static helpers while this workspace remains on Zod 3.
 - [Live database schema validation](live-database-schema-validation.md) — validate the development database with read-only catalog queries; Drizzle migration checks do not inspect live tables.
+- [Mobile safe-area regression](mobile-safe-area-regression.md) — keep geometry contracts and stable selectors until native screenshot runners are available.
