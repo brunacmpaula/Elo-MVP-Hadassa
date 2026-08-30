@@ -220,8 +220,8 @@ importers:
   artifacts/elo-mobile:
     dependencies:
       expo-network:
-        specifier: ~7.0.5
-        version: 7.0.5(expo@54.0.37)(react@19.1.0)
+        specifier: ~8.0.8
+        version: 8.0.8(expo@54.0.37)(react@19.1.0)
     devDependencies:
       '@babel/core':
         specifier: ^7.25.2
@@ -3399,8 +3399,8 @@ packages:
       react: '*'
       react-native: '*'
 
-  expo-network@7.0.5:
-    resolution: {integrity: sha512-5dlowKAimhIDN1/lBRnN6SSH6c07f12R3QrfLf3b3GEr6D+EijH2wE537mmwPh1p+254LAkm0Z5ZEXxbwII4sA==}
+  expo-network@8.0.8:
+    resolution: {integrity: sha512-dgrL8UHAmWofqeY4UEjWskCl/RoQAM0DG6PZR8xz2WZt+6aQEboQgFRXowCfhbKZ71d16sNuKXtwBEsp2DtdNw==}
     peerDependencies:
       expo: '*'
       react: '*'
@@ -9185,7 +9185,7 @@ snapshots:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0)
 
-  expo-network@7.0.5(expo@54.0.37)(react@19.1.0):
+  expo-network@8.0.8(expo@54.0.37)(react@19.1.0):
     dependencies:
       expo: 54.0.37(@babel/core@7.29.7)(@expo/metro-runtime@6.1.2)(expo-router@6.0.24)(react-native@0.81.5(@babel/core@7.29.7)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)(typescript@5.9.3)
       react: 19.1.0

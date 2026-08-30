@@ -1,21 +1,21 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, Switch } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { useListPosts } from '@workspace/api-client-react';
 import { useColors } from '../hooks/useColors';
 import { useSync } from '../context/SyncContext';
 import { PostCard } from './PostCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
-import { useRouter } from 'expo-router';
 import { useOfflineMode } from '../context/OfflineContext';
 import { Feather } from '@expo/vector-icons';
+import { ComposePostModal } from './ComposePostModal';
 
 export function MissionaryHome() {
   const colors = useColors();
   const { data: serverPosts, isLoading, refetch } = useListPosts({ mine: true });
-  const { localPosts, isSyncing, syncNow } = useSync();
-  const router = useRouter();
-  const { isOfflineMode, toggleOfflineMode } = useOfflineMode();
+  const { localPosts, isSyncing, syncNow, queue } = useSync();
+  const { isOfflineMode, isConnectionKnown } = useOfflineMode();
+  const [isComposeOpen, setIsComposeOpen] = useState(false);
 
   const allPosts = useMemo(() => {
     const remote = serverPosts || [];
@@ -40,22 +40,35 @@ export function MissionaryHome() {
             title="Novo"
             icon="plus"
             size="sm"
-            onPress={() => router.push('/compose')}
+            onPress={() => setIsComposeOpen(true)}
           />
         </View>
 
         <View style={[styles.offlineBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.offlineLeft}>
-            <Feather name={isOfflineMode ? 'wifi-off' : 'wifi'} size={18} color={isOfflineMode ? colors.destructive : colors.success} />
+            <Feather
+              name={
+                !isConnectionKnown
+                  ? 'loader'
+                  : isOfflineMode
+                    ? 'wifi-off'
+                    : isSyncing
+                      ? 'refresh-cw'
+                      : 'wifi'
+              }
+              size={18}
+              color={isOfflineMode ? colors.accent : colors.success}
+            />
             <Text style={[styles.offlineText, { color: colors.foreground }]}>
-              {isOfflineMode ? 'Modo Offline (Simulação)' : 'Conectado'}
+              {!isConnectionKnown
+                ? 'Verificando conexão'
+                : isOfflineMode
+                  ? `Você está offline${queue.length ? ` · ${queue.length} aguardando` : ''}`
+                  : isSyncing
+                    ? 'Sincronizando publicações'
+                    : 'Conectado e sincronizado'}
             </Text>
           </View>
-          <Switch 
-            value={isOfflineMode}
-            onValueChange={toggleOfflineMode}
-            trackColor={{ true: colors.destructive, false: colors.muted }}
-          />
         </View>
       </View>
 
@@ -76,6 +89,10 @@ export function MissionaryHome() {
             </Text>
           </View>
         }
+      />
+      <ComposePostModal
+        visible={isComposeOpen}
+        onClose={() => setIsComposeOpen(false)}
       />
     </SafeAreaView>
   );

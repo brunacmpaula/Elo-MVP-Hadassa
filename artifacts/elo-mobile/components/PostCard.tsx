@@ -84,12 +84,12 @@ export function PostCard({ post, isMissionary }: PostCardProps) {
           <Feather
             name={post.prayedByMe ? 'heart' : 'heart'}
             size={18}
-            color={post.prayedByMe ? colors.accent : colors.mutedForeground}
+            color={colors.accent}
           />
           <Text
             style={[
               styles.actionText,
-              { color: post.prayedByMe ? colors.accent : colors.mutedForeground },
+              { color: colors.accent },
             ]}
           >
             {post.prayerCount} {post.prayerCount === 1 ? 'oração' : 'orações'}

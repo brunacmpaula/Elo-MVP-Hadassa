@@ -26,7 +26,7 @@ const SyncContext = createContext<SyncContextType | null>(null);
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const { isOfflineMode } = useOfflineMode();
+  const { isOfflineMode, isConnectionKnown } = useOfflineMode();
   const queryClient = useQueryClient();
 
   const [queue, setQueue] = useState<SyncOp[]>([]);
@@ -76,13 +76,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem('@elo:posts', JSON.stringify(nextPosts));
     await AsyncStorage.setItem('@elo:queue', JSON.stringify(nextQueue));
 
-    if (!isOfflineMode) {
+    if (isConnectionKnown && !isOfflineMode) {
       setTimeout(syncNow, 500);
     }
   };
 
   const syncNow = async () => {
-    if (isOfflineMode || isSyncing) return;
+    if (!isConnectionKnown || isOfflineMode || isSyncing) return;
     
     const pending = queue.filter((q) => q.status === 'PENDING' || q.status === 'FAILED');
     if (pending.length === 0) return;
@@ -138,10 +138,10 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   // Attempt sync when coming online
   useEffect(() => {
-    if (!isOfflineMode) {
+    if (isConnectionKnown && !isOfflineMode) {
       syncNow();
     }
-  }, [isOfflineMode]);
+  }, [isConnectionKnown, isOfflineMode]);
 
   return (
     <SyncContext.Provider

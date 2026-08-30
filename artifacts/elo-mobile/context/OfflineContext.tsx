@@ -1,20 +1,49 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import * as Network from 'expo-network';
 
 type OfflineContextType = {
   isOfflineMode: boolean;
-  toggleOfflineMode: () => void;
+  isConnectionKnown: boolean;
+  connectionType: Network.NetworkStateType | undefined;
 };
 
 const OfflineContext = createContext<OfflineContextType | null>(null);
 
 export function OfflineProvider({ children }: { children: React.ReactNode }) {
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [networkState, setNetworkState] = useState<Network.NetworkState>({
+    isConnected: undefined,
+    isInternetReachable: undefined,
+    type: Network.NetworkStateType.UNKNOWN,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Network.getNetworkStateAsync().then((state) => {
+      if (isMounted) setNetworkState(state);
+    });
+
+    const subscription = Network.addNetworkStateListener(setNetworkState);
+
+    return () => {
+      isMounted = false;
+      subscription.remove();
+    };
+  }, []);
+
+  const isConnectionKnown =
+    networkState.isConnected !== undefined &&
+    networkState.isInternetReachable !== undefined;
+  const isOfflineMode =
+    networkState.isConnected === false ||
+    networkState.isInternetReachable === false;
 
   return (
     <OfflineContext.Provider
       value={{
         isOfflineMode,
-        toggleOfflineMode: () => setIsOfflineMode((prev) => !prev),
+        isConnectionKnown,
+        connectionType: networkState.type,
       }}
     >
       {children}
