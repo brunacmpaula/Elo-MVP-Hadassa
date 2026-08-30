@@ -3,3 +3,4 @@
 - [Mobile safe-area regression](mobile-safe-area-regression.md) — keep geometry contracts and stable selectors until native screenshot runners are available.
 - [Expo stale preview process](expo-stale-preview-process.md) — if a restart prompts for another port, remove the orphaned Expo process before restarting again.
 - [Expo browser validation routing](expo-browser-validation-routing.md) — browser testers may hit the shared artifact route while appPreview correctly reaches Expo’s direct domain.
+- [Expo browser preview limitation](expo-browser-preview-limitation.md) — the Expo artifact's web proxy may 404 its bundle; native bundle builds remain the reliable validation path.
