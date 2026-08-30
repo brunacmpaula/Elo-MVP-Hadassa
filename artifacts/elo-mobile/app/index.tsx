@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { useColors } from '../hooks/useColors';
@@ -32,11 +32,6 @@ export default function LoginScreen() {
     <AppSafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
         <View style={styles.brand}>
-          <Image
-            source={require('../assets/images/elo-logo.png')}
-            style={styles.logo}
-            accessibilityLabel="Logo do Elo"
-          />
           <Text style={[styles.title, { color: colors.foreground }]}>Elo</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Mesmo longe, juntos na missão.
@@ -89,14 +84,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     alignItems: 'center',
-    marginBottom: 64,
-  },
-  logo: {
-    width: 112,
-    height: 112,
-    borderRadius: 28,
-    marginBottom: 24,
-    backgroundColor: '#FBF8F1',
+    marginBottom: 48,
   },
   title: {
     fontSize: 40,

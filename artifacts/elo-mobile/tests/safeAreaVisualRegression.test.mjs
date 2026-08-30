@@ -219,6 +219,14 @@ test('keeps the safe-area provider and platform policies wired at the app bounda
   assert.match(sources.safeArea, /bottom: Platform\.OS === 'web' \? WEB_BOTTOM_INSET : insets\.bottom/);
 });
 
+test('keeps the login brand text-only while preserving its entry controls', () => {
+  assert.doesNotMatch(sources.login, /\bImage\b|elo-logo|Logo do Elo|styles\.logo/);
+  assert.match(sources.login, />Elo<\/Text>/);
+  assert.match(sources.login, /Mesmo longe, juntos na missão\./);
+  assert.match(sources.login, /testID="login-as-missionary"/);
+  assert.match(sources.login, /testID="login-as-supporter"/);
+});
+
 test('keeps both tab-bar modes safe on iPhone, Android and web', () => {
   assert.match(sources.tabsLayout, /useSafeAreaInsets/);
   assert.match(sources.tabsLayout, /paddingBottom: isWeb \? 0 : insets\.bottom/);
