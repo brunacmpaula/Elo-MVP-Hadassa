@@ -35,9 +35,10 @@ import {
 import {
   contributionAvailabilitiesTable,
   db,
+  postsTable,
   profilePreferencesTable,
 } from "@workspace/db";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { dispatchMissionaryNotification } from "../lib/notifications";
 
@@ -65,6 +66,7 @@ type SessionTokenPayload = {
 
 type Post = {
   id: string;
+  clientOperationId: string;
   missionaryId: string;
   missionaryName: string;
   missionaryCountry: string;
@@ -98,6 +100,7 @@ type Comment = {
   authorName: string;
   content: string;
   createdAt: string;
+  clientOperationKey?: string;
 };
 
 type Missionary = {
@@ -149,9 +152,10 @@ const missionaries: Missionary[] = [
 ];
 
 const now = new Date().toISOString();
-const posts: Post[] = [
+const defaultPosts: Post[] = [
   {
     id: "post-community-kits",
+    clientOperationId: "seed-post-community-kits",
     missionaryId: "missionary-ana",
     missionaryName: "Ana Silva",
     missionaryCountry: "Moçambique",
@@ -170,6 +174,7 @@ const posts: Post[] = [
   },
   {
     id: "post-prayer-team",
+    clientOperationId: "seed-post-prayer-team",
     missionaryId: "missionary-ana",
     missionaryName: "Ana Silva",
     missionaryCountry: "Moçambique",
@@ -188,6 +193,7 @@ const posts: Post[] = [
   },
   {
     id: "post-school",
+    clientOperationId: "seed-post-school",
     missionaryId: "missionary-joao",
     missionaryName: "João Santos",
     missionaryCountry: "Brasil",
@@ -206,6 +212,7 @@ const posts: Post[] = [
   },
 ];
 
+let posts: Post[] = [];
 const processedOperations = new Map<string, string>();
 const processedComments = new Map<string, string>();
 const followedMissionariesByUser = new Map<string, Set<string>>([
@@ -282,6 +289,110 @@ const followerNotificationRecipients = [
   { id: "user-supporter", gender: "MALE" as const },
   { id: "user-supporter-female", gender: "FEMALE" as const },
 ];
+
+let postsLoadPromise: Promise<void> | null = null;
+
+function postFromRecord(record: typeof postsTable.$inferSelect): Post {
+  return {
+    id: record.id,
+    clientOperationId: record.clientOperationId,
+    missionaryId: record.missionaryId,
+    missionaryName: record.missionaryName,
+    missionaryCountry: record.missionaryCountry,
+    type: record.type as Post["type"],
+    title: record.title,
+    content: record.content,
+    status: record.status as Post["status"],
+    createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
+    prayerCount: record.prayerCount,
+    prayedByMe: false,
+    missionarySaved: false,
+    media: record.media as PostMedia[],
+    comments: record.comments as Comment[],
+  };
+}
+
+function postValues(post: Post) {
+  return {
+    id: post.id,
+    clientOperationId: post.clientOperationId,
+    missionaryId: post.missionaryId,
+    missionaryName: post.missionaryName,
+    missionaryCountry: post.missionaryCountry,
+    type: post.type,
+    title: post.title,
+    content: post.content,
+    status: post.status,
+    createdAt: new Date(post.createdAt),
+    updatedAt: new Date(post.updatedAt),
+    prayerCount: post.prayerCount,
+    media: post.media,
+    comments: post.comments,
+  };
+}
+
+async function insertPost(post: Post) {
+  await db.insert(postsTable).values(postValues(post));
+}
+
+async function updateStoredPost(post: Post) {
+  await db
+    .update(postsTable)
+    .set({
+      title: post.title,
+      content: post.content,
+      status: post.status,
+      updatedAt: new Date(post.updatedAt),
+      prayerCount: post.prayerCount,
+      media: post.media,
+      comments: post.comments,
+    })
+    .where(eq(postsTable.id, post.id));
+}
+
+async function ensurePostsLoaded() {
+  if (postsLoadPromise) return postsLoadPromise;
+
+  postsLoadPromise = (async () => {
+    let records = await db
+      .select()
+      .from(postsTable)
+      .orderBy(desc(postsTable.createdAt), desc(postsTable.id));
+
+    if (records.length === 0) {
+      await db
+        .insert(postsTable)
+        .values(defaultPosts.map(postValues))
+        .onConflictDoNothing();
+      records = await db
+        .select()
+        .from(postsTable)
+        .orderBy(desc(postsTable.createdAt), desc(postsTable.id));
+    }
+
+    posts = records.map(postFromRecord);
+    processedOperations.clear();
+    for (const post of posts) {
+      processedOperations.set(post.clientOperationId, post.id);
+    for (const comment of post.comments) {
+      if (comment.clientOperationKey) {
+        processedComments.set(comment.clientOperationKey, comment.id);
+      }
+    }
+    }
+
+    for (const missionary of missionaries) {
+      missionary.latestPostType =
+        posts.find((post) => post.missionaryId === missionary.id)?.type ?? null;
+    }
+  })().catch((error) => {
+    postsLoadPromise = null;
+    throw error;
+  });
+
+  return postsLoadPromise;
+}
 
 function findMissionary(id: string) {
   return missionaries.find((missionary) => missionary.id === id);
@@ -633,6 +744,7 @@ router.post("/auth/login", (req, res) => {
 });
 
 router.get("/missionaries", async (req, res) => {
+  await ensurePostsLoaded();
   const viewer = getAuthenticatedUser(req);
   const publicMissionaries = await Promise.all(
     missionaries.map((missionary) => toPublicMissionary(missionary, viewer)),
@@ -641,6 +753,7 @@ router.get("/missionaries", async (req, res) => {
 });
 
 router.get("/missionaries/:missionaryId", async (req, res) => {
+  await ensurePostsLoaded();
   const missionary = findMissionary(req.params["missionaryId"] ?? "");
   if (!missionary) {
     res.status(404).json({ error: "Missionário não encontrado" });
@@ -675,6 +788,7 @@ router.get("/missionaries/:missionaryId/preferences", async (req, res) => {
 router.get(
   "/missionaries/:missionaryId/contribution-availabilities",
   async (req, res) => {
+    await ensurePostsLoaded();
     const missionary = findMissionary(req.params["missionaryId"] ?? "");
     if (!missionary) {
       res.status(404).json({ error: "Missionário não encontrado" });
@@ -770,6 +884,7 @@ router.delete("/missionaries/:missionaryId/follow", (req, res) => {
 });
 
 router.get("/posts", async (req, res) => {
+  await ensurePostsLoaded();
   const query = ListPostsQueryParams.parse(req.query);
   const filtered = query.missionaryId
     ? posts.filter((post) => post.missionaryId === query.missionaryId)
@@ -782,6 +897,7 @@ router.get("/posts", async (req, res) => {
 });
 
 router.post("/posts", async (req, res) => {
+  await ensurePostsLoaded();
   const authenticatedMissionary = ensureMissionaryUser(req, res);
   if (!authenticatedMissionary) return;
   const parsedInput = CreatePostBody.safeParse(req.body);
@@ -822,7 +938,8 @@ router.post("/posts", async (req, res) => {
   }
   const timestamp = new Date().toISOString();
   const post: Post = {
-    id: `post-${Date.now()}`,
+    id: `post-${randomUUID()}`,
+    clientOperationId: input.clientOperationId,
     missionaryId: missionary.id,
     missionaryName: missionary.name,
     missionaryCountry: missionary.country,
@@ -838,6 +955,7 @@ router.post("/posts", async (req, res) => {
     media,
     comments: [],
   };
+  await insertPost(post);
   posts.unshift(post);
   missionary.latestPostType = post.type;
   processedOperations.set(input.clientOperationId, post.id);
@@ -865,6 +983,7 @@ router.post("/posts", async (req, res) => {
 });
 
 router.get("/posts/:postId", async (req, res) => {
+  await ensurePostsLoaded();
   const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
@@ -875,6 +994,7 @@ router.get("/posts/:postId", async (req, res) => {
 });
 
 router.patch("/posts/:postId", async (req, res) => {
+  await ensurePostsLoaded();
   const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
@@ -885,6 +1005,7 @@ router.patch("/posts/:postId", async (req, res) => {
   if (input.title) post.title = input.title;
   if (input.content) post.content = input.content;
   post.updatedAt = new Date().toISOString();
+  await updateStoredPost(post);
   res.json(
     UpdatePostResponse.parse(
       await toPublicPost(post, getAuthenticatedUser(req)),
@@ -892,7 +1013,8 @@ router.patch("/posts/:postId", async (req, res) => {
   );
 });
 
-router.get("/posts/:postId/comments", (req, res) => {
+router.get("/posts/:postId/comments", async (req, res) => {
+  await ensurePostsLoaded();
   const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
@@ -901,7 +1023,8 @@ router.get("/posts/:postId/comments", (req, res) => {
   res.json(ListPostCommentsResponse.parse(post.comments));
 });
 
-router.post("/posts/:postId/comments", (req, res) => {
+router.post("/posts/:postId/comments", async (req, res) => {
+  await ensurePostsLoaded();
   const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
@@ -923,7 +1046,9 @@ router.post("/posts/:postId/comments", (req, res) => {
   const existingId = processedComments.get(operationKey);
   const existing = existingId
     ? posts.flatMap((item) => item.comments).find((item) => item.id === existingId)
-    : undefined;
+    : post.comments.find(
+        (item) => item.clientOperationKey === operationKey,
+      );
   if (existing) {
     res.status(201).json(CreatePostCommentResponse.parse(existing));
     return;
@@ -934,13 +1059,16 @@ router.post("/posts/:postId/comments", (req, res) => {
     authorName: supporter.name,
     content,
     createdAt: new Date().toISOString(),
+    clientOperationKey: operationKey,
   };
   post.comments.push(comment);
+  await updateStoredPost(post);
   processedComments.set(operationKey, comment.id);
   res.status(201).json(CreatePostCommentResponse.parse(comment));
 });
 
-router.post("/posts/:postId/prayers", (req, res) => {
+router.post("/posts/:postId/prayers", async (req, res) => {
+  await ensurePostsLoaded();
   const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
@@ -948,6 +1076,7 @@ router.post("/posts/:postId/prayers", (req, res) => {
   }
   if (!post.prayedByMe) post.prayerCount += 1;
   post.prayedByMe = true;
+  await updateStoredPost(post);
   res.json(
     PrayForPostResponse.parse({
       postId: post.id,
@@ -957,7 +1086,8 @@ router.post("/posts/:postId/prayers", (req, res) => {
   );
 });
 
-router.delete("/posts/:postId/prayers", (req, res) => {
+router.delete("/posts/:postId/prayers", async (req, res) => {
+  await ensurePostsLoaded();
   const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
@@ -965,6 +1095,7 @@ router.delete("/posts/:postId/prayers", (req, res) => {
   }
   if (post.prayedByMe) post.prayerCount = Math.max(0, post.prayerCount - 1);
   post.prayedByMe = false;
+  await updateStoredPost(post);
   res.json(
     RemovePrayerResponse.parse({
       postId: post.id,
@@ -977,6 +1108,7 @@ router.delete("/posts/:postId/prayers", (req, res) => {
 router.post(
   "/posts/:postId/contribution-availability",
   async (req, res) => {
+    await ensurePostsLoaded();
     const post = posts.find((item) => item.id === req.params["postId"]);
     if (!post) {
       res.status(404).json({ error: "Publicação não encontrada" });
@@ -1011,6 +1143,7 @@ router.post(
 router.delete(
   "/posts/:postId/contribution-availability",
   async (req, res) => {
+    await ensurePostsLoaded();
     const post = posts.find((item) => item.id === req.params["postId"]);
     if (!post) {
       res.status(404).json({ error: "Publicação não encontrada" });
@@ -1039,11 +1172,12 @@ router.delete(
   },
 );
 
-router.post("/sync", (req, res) => {
+router.post("/sync", async (req, res) => {
+  await ensurePostsLoaded();
   const authenticatedMissionary = ensureMissionaryUser(req, res);
   if (!authenticatedMissionary) return;
   const input = SyncOperationsBody.parse(req.body);
-  const acks = input.operations.map((operation) => {
+  const acks = await Promise.all(input.operations.map(async (operation) => {
     const knownEntity = processedOperations.get(operation.operationId);
     if (knownEntity) {
       const knownPost = posts.find((post) => post.id === knownEntity);
@@ -1124,9 +1258,11 @@ router.post("/sync", (req, res) => {
       existing.status = "PUBLISHED";
       existing.updatedAt = timestamp;
       existing.media = media;
+      await updateStoredPost(existing);
     } else {
-      posts.unshift({
+      const syncedPost: Post = {
         id: operation.entityId,
+        clientOperationId: operation.operationId,
         missionaryId: missionary.id,
         missionaryName: missionary.name,
         missionaryCountry: missionary.country,
@@ -1141,7 +1277,9 @@ router.post("/sync", (req, res) => {
         missionarySaved: false,
         media,
         comments: [],
-      });
+      };
+      await insertPost(syncedPost);
+      posts.unshift(syncedPost);
     }
     processedOperations.set(operation.operationId, operation.entityId);
     return {
@@ -1150,7 +1288,7 @@ router.post("/sync", (req, res) => {
       entityId: operation.entityId,
       error: null,
     };
-  });
+  }));
 
   res.json(SyncOperationsResponse.parse({ acks }));
 });
