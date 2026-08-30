@@ -8,6 +8,8 @@ import {
   CreatePostCommentBody,
   CreatePostCommentResponse,
   CreateContributionAvailabilityResponse,
+  CreateContributionAvailabilityFeedbackBody,
+  CreateContributionAvailabilityFeedbackResponse,
   CreatePostBody,
   CreatePostResponse,
   ListPostCommentsResponse,
@@ -34,6 +36,7 @@ import {
 } from "@workspace/api-zod";
 import {
   contributionAvailabilitiesTable,
+  contributionAvailabilityFeedbackTable,
   db,
   postsTable,
   profilePreferencesTable,
@@ -79,6 +82,7 @@ type Post = {
   prayerCount: number;
   prayedByMe: boolean;
   missionarySaved: boolean;
+  contributionFeedback: ContributionAvailabilityFeedback | null;
   media: PostMedia[];
   comments: Comment[];
 };
@@ -101,6 +105,15 @@ type Comment = {
   content: string;
   createdAt: string;
   clientOperationKey?: string;
+};
+
+type ContributionAvailabilityFeedback = {
+  id: string;
+  availabilityId: string;
+  postId: string;
+  message: string;
+  createdAt: Date;
+  updatedAt: Date;
 };
 
 type Missionary = {
@@ -169,6 +182,7 @@ const defaultPosts: Post[] = [
     prayerCount: 7,
     prayedByMe: false,
     missionarySaved: false,
+    contributionFeedback: null,
     media: [],
     comments: [],
   },
@@ -188,6 +202,7 @@ const defaultPosts: Post[] = [
     prayerCount: 42,
     prayedByMe: false,
     missionarySaved: false,
+    contributionFeedback: null,
     media: [],
     comments: [],
   },
@@ -207,6 +222,7 @@ const defaultPosts: Post[] = [
     prayerCount: 18,
     prayedByMe: false,
     missionarySaved: false,
+    contributionFeedback: null,
     media: [],
     comments: [],
   },
@@ -308,6 +324,7 @@ function postFromRecord(record: typeof postsTable.$inferSelect): Post {
     prayerCount: record.prayerCount,
     prayedByMe: false,
     missionarySaved: false,
+    contributionFeedback: null,
     media: record.media as PostMedia[],
     comments: record.comments as Comment[],
   };
@@ -539,6 +556,47 @@ async function getContributionAvailabilityState(
   };
 }
 
+async function getContributionFeedbackForSupporter(
+  post: Post,
+  viewer: SessionUser | null,
+) {
+  if (post.type !== "NEED" || viewer?.role !== "SUPPORTER") return null;
+
+  const [availability] = await db
+    .select({ id: contributionAvailabilitiesTable.id })
+    .from(contributionAvailabilitiesTable)
+    .where(
+      and(
+        eq(contributionAvailabilitiesTable.postId, post.id),
+        eq(contributionAvailabilitiesTable.supporterId, viewer.id),
+      ),
+    )
+    .limit(1);
+  if (!availability) return null;
+
+  const [feedback] = await db
+    .select()
+    .from(contributionAvailabilityFeedbackTable)
+    .where(
+      eq(
+        contributionAvailabilityFeedbackTable.availabilityId,
+        availability.id,
+      ),
+    )
+    .limit(1);
+
+  return feedback
+    ? {
+        id: feedback.id,
+        availabilityId: feedback.availabilityId,
+        postId: feedback.postId,
+        message: feedback.message,
+        createdAt: feedback.createdAt,
+        updatedAt: feedback.updatedAt,
+      }
+    : null;
+}
+
 function ensureProfileOwner(
   req: Request,
   res: Response,
@@ -704,6 +762,10 @@ async function toPublicPost(post: Post, viewer: SessionUser | null) {
     post,
     viewer,
   );
+  const contributionFeedback = await getContributionFeedbackForSupporter(
+    post,
+    viewer,
+  );
   const viewerPost = {
     ...post,
     missionarySaved:
@@ -713,6 +775,7 @@ async function toPublicPost(post: Post, viewer: SessionUser | null) {
     contributionAvailabilityCount:
       contributionAvailability.availabilityCount,
     contributionAvailableByMe: contributionAvailability.availableByMe,
+    contributionFeedback,
   };
   if (!missionary) return viewerPost;
   const preferences = await getProfilePreferences(missionary.userId);
@@ -727,7 +790,7 @@ async function toPublicPost(post: Post, viewer: SessionUser | null) {
 }
 
 router.post("/auth/login", (req, res) => {
-  const input = SyncOperationsBody.parse(req.body);
+  const input = LoginBody.parse(req.body);
   const credentials = demoCredentialsByEmail.get(input.email.toLowerCase());
   if (!credentials || credentials.password !== input.password) {
     res.status(401).json({ error: "Credenciais inválidas" });
@@ -746,14 +809,6 @@ router.post("/auth/login", (req, res) => {
 router.get("/missionaries", async (req, res) => {
   await ensurePostsLoaded();
   const viewer = getAuthenticatedUser(req);
-  const ownMissionary =
-    query.mine && viewer ? findMissionaryForUser(viewer.id) : undefined;
-
-  const ownMissionary =
-    query.mine && viewer ? findMissionaryForUser(viewer.id) : undefined;
-
-  const ownMissionary =
-    query.mine && viewer ? findMissionaryForUser(viewer.id) : undefined;
   const publicMissionaries = await Promise.all(
     missionaries.map((missionary) => toPublicMissionary(missionary, viewer)),
   );
@@ -762,23 +817,17 @@ router.get("/missionaries", async (req, res) => {
 
 router.get("/missionaries/:missionaryId", async (req, res) => {
   await ensurePostsLoaded();
-  const missionary = authenticatedMissionary;
+  const missionary = findMissionary(req.params["missionaryId"] ?? "");
   if (!missionary) {
     res.status(404).json({ error: "Missionário não encontrado" });
     return;
   }
   const viewer = getAuthenticatedUser(req);
-  const ownMissionary =
-    query.mine && viewer ? findMissionaryForUser(viewer.id) : undefined;
-
-  const ownMissionary =
-    query.mine && viewer ? findMissionaryForUser(viewer.id) : undefined;
-
-  const ownMissionary =
-    query.mine && viewer ? findMissionaryForUser(viewer.id) : undefined;
   const publicMissionary = await toPublicMissionary(missionary, viewer);
   const publicPosts = await Promise.all(
-    filtered.map((post) => toPublicPost(post, viewer)),
+    posts
+      .filter((post) => post.missionaryId === missionary.id)
+      .map((post) => toPublicPost(post, viewer)),
   );
   res.json(
     GetMissionaryResponse.parse({
@@ -789,7 +838,7 @@ router.get("/missionaries/:missionaryId", async (req, res) => {
 });
 
 router.get("/missionaries/:missionaryId/preferences", async (req, res) => {
-  const missionary = authenticatedMissionary;
+  const missionary = findMissionary(req.params["missionaryId"] ?? "");
   if (!missionary) {
     res.status(404).json({ error: "Missionário não encontrado" });
     return;
@@ -803,7 +852,7 @@ router.get(
   "/missionaries/:missionaryId/contribution-availabilities",
   async (req, res) => {
     await ensurePostsLoaded();
-  const missionary = authenticatedMissionary;
+    const missionary = findMissionary(req.params["missionaryId"] ?? "");
     if (!missionary) {
       res.status(404).json({ error: "Missionário não encontrado" });
       return;
@@ -824,6 +873,30 @@ router.get(
       .select()
       .from(contributionAvailabilitiesTable)
       .where(inArray(contributionAvailabilitiesTable.postId, needPostIds));
+    const feedbackRecords = records.length
+      ? await db
+          .select()
+          .from(contributionAvailabilityFeedbackTable)
+          .where(
+            inArray(
+              contributionAvailabilityFeedbackTable.availabilityId,
+              records.map((record) => record.id),
+            ),
+          )
+      : [];
+    const feedbackByAvailabilityId = new Map(
+      feedbackRecords.map((feedback) => [
+        feedback.availabilityId,
+        {
+          id: feedback.id,
+          availabilityId: feedback.availabilityId,
+          postId: feedback.postId,
+          message: feedback.message,
+          createdAt: feedback.createdAt,
+          updatedAt: feedback.updatedAt,
+        },
+      ]),
+    );
     const response = records
       .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
       .map(({ id, postId, supporterName, createdAt }) => ({
@@ -831,26 +904,105 @@ router.get(
         postId,
         supporterName,
         createdAt,
+        feedback: feedbackByAvailabilityId.get(id) ?? null,
       }));
 
     res.json(ListMissionaryContributionAvailabilitiesResponse.parse(response));
   },
 );
 
+router.post(
+  "/missionaries/:missionaryId/contribution-availabilities/:availabilityId/feedback",
+  async (req, res) => {
+    const missionary = findMissionary(req.params["missionaryId"] ?? "");
+    if (!missionary) {
+      res.status(404).json({ error: "Missionário não encontrado" });
+      return;
+    }
+    if (!ensureProfileOwner(req, res, missionary)) return;
+
+    const availabilityId = req.params["availabilityId"] ?? "";
+    const [availability] = await db
+      .select()
+      .from(contributionAvailabilitiesTable)
+      .where(eq(contributionAvailabilitiesTable.id, availabilityId))
+      .limit(1);
+    const post = availability
+      ? posts.find((item) => item.id === availability.postId)
+      : undefined;
+    if (!availability || !post || post.missionaryId !== missionary.id) {
+      res.status(404).json({ error: "Disponibilidade não encontrada" });
+      return;
+    }
+    if (post.type !== "NEED") {
+      res
+        .status(400)
+        .json({ error: "Retornos só podem ser enviados para Necessidades" });
+      return;
+    }
+
+    const parsed = CreateContributionAvailabilityFeedbackBody.safeParse(
+      req.body,
+    );
+    if (!parsed.success) {
+      res.status(400).json({ error: "Retorno inválido" });
+      return;
+    }
+    const message = parsed.data.message.trim();
+    if (!message) {
+      res.status(400).json({ error: "Escreva uma mensagem antes de enviar" });
+      return;
+    }
+
+    const id = `feedback-${availability.id}`;
+    await db
+      .insert(contributionAvailabilityFeedbackTable)
+      .values({
+        id,
+        availabilityId: availability.id,
+        postId: availability.postId,
+        missionaryId: missionary.id,
+        supporterId: availability.supporterId,
+        message,
+      })
+      .onConflictDoUpdate({
+        target: contributionAvailabilityFeedbackTable.availabilityId,
+        set: {
+          message,
+          updatedAt: new Date(),
+        },
+      });
+
+    const [feedback] = await db
+      .select()
+      .from(contributionAvailabilityFeedbackTable)
+      .where(
+        eq(contributionAvailabilityFeedbackTable.availabilityId, availability.id),
+      )
+      .limit(1);
+    res
+      .status(201)
+      .json(CreateContributionAvailabilityFeedbackResponse.parse(feedback));
+  },
+);
+
 router.patch("/missionaries/:missionaryId/preferences", async (req, res) => {
-  const missionary = authenticatedMissionary;
+  const missionary = findMissionary(req.params["missionaryId"] ?? "");
   if (!missionary) {
     res.status(404).json({ error: "Missionário não encontrado" });
     return;
   }
   if (!ensureProfileOwner(req, res, missionary)) return;
 
-  const parsed = CreatePostCommentBody.safeParse(req.body);
+  const parsed = UpdateMissionaryPreferencesBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Preferências inválidas" });
     return;
   }
-  const preferences = await getProfilePreferences(missionary.userId);
+  const preferences = normalizeProfilePreferences(
+    parsed.data.hiddenFields,
+    parsed.data.womenOnlyNotifications,
+  );
   if (preferences.hiddenFields.length !== new Set(preferences.hiddenFields).size) {
     res.status(400).json({ error: "Campos ocultos não podem ser duplicados" });
     return;
@@ -861,12 +1013,12 @@ router.patch("/missionaries/:missionaryId/preferences", async (req, res) => {
 });
 
 router.post("/missionaries/:missionaryId/follow", (req, res) => {
-  const missionary = authenticatedMissionary;
+  const missionary = findMissionary(req.params["missionaryId"] ?? "");
   if (!missionary) {
     res.status(404).json({ error: "Missionário não encontrado" });
     return;
   }
-    const supporter = ensureSupporterUser(req, res);
+  const supporter = ensureSupporterUser(req, res);
   if (!supporter) return;
   getFollowedMissionaries(supporter.id).add(missionary.id);
   res.json(
@@ -878,12 +1030,12 @@ router.post("/missionaries/:missionaryId/follow", (req, res) => {
 });
 
 router.delete("/missionaries/:missionaryId/follow", (req, res) => {
-  const missionary = authenticatedMissionary;
+  const missionary = findMissionary(req.params["missionaryId"] ?? "");
   if (!missionary) {
     res.status(404).json({ error: "Missionário não encontrado" });
     return;
   }
-    const supporter = ensureSupporterUser(req, res);
+  const supporter = ensureSupporterUser(req, res);
   if (!supporter) return;
   getFollowedMissionaries(supporter.id).delete(missionary.id);
   res.json(
@@ -897,22 +1049,10 @@ router.delete("/missionaries/:missionaryId/follow", (req, res) => {
 router.get("/posts", async (req, res) => {
   await ensurePostsLoaded();
   const query = ListPostsQueryParams.parse(req.query);
-  const filtered = query.mine
-    ? ownMissionary
-      ? posts.filter((post) => post.missionaryId === ownMissionary.id)
-      : []
-    : query.missionaryId
-      ? posts.filter((post) => post.missionaryId === query.missionaryId)
-      : posts;
+  const filtered = query.missionaryId
+    ? posts.filter((post) => post.missionaryId === query.missionaryId)
+    : posts;
   const viewer = getAuthenticatedUser(req);
-  const ownMissionary =
-    query.mine && viewer ? findMissionaryForUser(viewer.id) : undefined;
-
-  const ownMissionary =
-    query.mine && viewer ? findMissionaryForUser(viewer.id) : undefined;
-
-  const ownMissionary =
-    query.mine && viewer ? findMissionaryForUser(viewer.id) : undefined;
   const publicPosts = await Promise.all(
     filtered.map((post) => toPublicPost(post, viewer)),
   );
@@ -928,13 +1068,11 @@ router.post("/posts", async (req, res) => {
     res.status(400).json({ error: "Publicação ou imagem inválida" });
     return;
   }
-  const input = SyncOperationsBody.parse(req.body);
-  const existingId = processedComments.get(operationKey);
+  const input = parsedInput.data;
+  const existingId = processedOperations.get(input.clientOperationId);
   const existing = existingId
-    ? posts.flatMap((item) => item.comments).find((item) => item.id === existingId)
-    : post.comments.find(
-        (item) => item.clientOperationKey === operationKey,
-      );
+    ? posts.find((post) => post.id === existingId)
+    : undefined;
   if (existing) {
     if (existing.missionaryId !== authenticatedMissionary.id) {
       res.status(403).json({ error: "Operação pertence a outro perfil" });
@@ -962,7 +1100,25 @@ router.post("/posts", async (req, res) => {
     return;
   }
   const timestamp = new Date().toISOString();
-    const post = posts.find((item) => item.id === req.params["postId"]);
+  const post: Post = {
+    id: `post-${randomUUID()}`,
+    clientOperationId: input.clientOperationId,
+    missionaryId: missionary.id,
+    missionaryName: missionary.name,
+    missionaryCountry: missionary.country,
+    type: input.type,
+    title: input.title,
+    content: input.content,
+    status: "PUBLISHED",
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    prayerCount: 0,
+    prayedByMe: false,
+    missionarySaved: false,
+    contributionFeedback: null,
+    media,
+    comments: [],
+  };
   await insertPost(post);
   posts.unshift(post);
   missionary.latestPostType = post.type;
@@ -992,7 +1148,7 @@ router.post("/posts", async (req, res) => {
 
 router.get("/posts/:postId", async (req, res) => {
   await ensurePostsLoaded();
-    const post = posts.find((item) => item.id === req.params["postId"]);
+  const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
     return;
@@ -1003,13 +1159,13 @@ router.get("/posts/:postId", async (req, res) => {
 
 router.patch("/posts/:postId", async (req, res) => {
   await ensurePostsLoaded();
-    const post = posts.find((item) => item.id === req.params["postId"]);
+  const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
     return;
   }
   if (!ensurePostOwner(req, res, post)) return;
-  const input = SyncOperationsBody.parse(req.body);
+  const input = UpdatePostBody.parse(req.body);
   if (input.title) post.title = input.title;
   if (input.content) post.content = input.content;
   post.updatedAt = new Date().toISOString();
@@ -1023,33 +1179,22 @@ router.patch("/posts/:postId", async (req, res) => {
 
 router.get("/posts/:postId/comments", async (req, res) => {
   await ensurePostsLoaded();
-    const post = posts.find((item) => item.id === req.params["postId"]);
+  const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
     return;
   }
-  if (post.prayedByMe) post.prayerCount = Math.max(0, post.prayerCount - 1);
-  post.prayedByMe = false;
-  await updateStoredPost(post);
-  res.json(
-    RemovePrayerResponse.parse({
-      postId: post.id,
-      prayedByMe: false,
-      prayerCount: post.prayerCount,
-    }),
-  );
+  res.json(ListPostCommentsResponse.parse(post.comments));
 });
 
-router.post(
-  "/posts/:postId/contribution-availability",
-  async (req, res) => {
-    await ensurePostsLoaded();
-    const post = posts.find((item) => item.id === req.params["postId"]);
-    if (!post) {
-      res.status(404).json({ error: "Publicação não encontrada" });
-      return;
-    }
-    const supporter = ensureSupporterUser(req, res);
+router.post("/posts/:postId/comments", async (req, res) => {
+  await ensurePostsLoaded();
+  const post = posts.find((item) => item.id === req.params["postId"]);
+  if (!post) {
+    res.status(404).json({ error: "Publicação não encontrada" });
+    return;
+  }
+  const supporter = ensureSupporterUser(req, res);
   if (!supporter) return;
   const parsed = CreatePostCommentBody.safeParse(req.body);
   if (!parsed.success) {
@@ -1088,28 +1233,26 @@ router.post(
 
 router.post("/posts/:postId/prayers", async (req, res) => {
   await ensurePostsLoaded();
-    const post = posts.find((item) => item.id === req.params["postId"]);
+  const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
     return;
   }
-  if (post.prayedByMe) post.prayerCount = Math.max(0, post.prayerCount - 1);
-  post.prayedByMe = false;
+  if (!post.prayedByMe) post.prayerCount += 1;
+  post.prayedByMe = true;
   await updateStoredPost(post);
   res.json(
-    RemovePrayerResponse.parse({
+    PrayForPostResponse.parse({
       postId: post.id,
-      prayedByMe: false,
+      prayedByMe: true,
       prayerCount: post.prayerCount,
     }),
   );
 });
 
-router.post(
-  "/posts/:postId/contribution-availability",
-  async (req, res) => {
-    await ensurePostsLoaded();
-    const post = posts.find((item) => item.id === req.params["postId"]);
+router.delete("/posts/:postId/prayers", async (req, res) => {
+  await ensurePostsLoaded();
+  const post = posts.find((item) => item.id === req.params["postId"]);
   if (!post) {
     res.status(404).json({ error: "Publicação não encontrada" });
     return;
@@ -1140,18 +1283,19 @@ router.post(
     if (post.type !== "NEED") {
       res
         .status(400)
-        .json({ error: "Disponibilidade só pode ser retirada de Necessidades" });
+        .json({ error: "Disponibilidade só pode ser registrada em Necessidades" });
       return;
     }
 
     await db
-      .delete(contributionAvailabilitiesTable)
-      .where(
-        and(
-          eq(contributionAvailabilitiesTable.postId, post.id),
-          eq(contributionAvailabilitiesTable.supporterId, supporter.id),
-        ),
-      );
+      .insert(contributionAvailabilitiesTable)
+      .values({
+        id: `availability-${randomUUID()}`,
+        postId: post.id,
+        supporterId: supporter.id,
+        supporterName: supporter.name,
+      })
+      .onConflictDoNothing();
 
     const state = await getContributionAvailabilityState(post, supporter);
     res
@@ -1177,6 +1321,18 @@ router.delete(
         .json({ error: "Disponibilidade só pode ser retirada de Necessidades" });
       return;
     }
+
+    await db
+      .delete(contributionAvailabilityFeedbackTable)
+      .where(
+        and(
+          eq(contributionAvailabilityFeedbackTable.postId, post.id),
+          eq(
+            contributionAvailabilityFeedbackTable.supporterId,
+            supporter.id,
+          ),
+        ),
+      );
 
     await db
       .delete(contributionAvailabilitiesTable)
@@ -1295,6 +1451,7 @@ router.post("/sync", async (req, res) => {
         prayerCount: 0,
         prayedByMe: false,
         missionarySaved: false,
+        contributionFeedback: null,
         media,
         comments: [],
       };

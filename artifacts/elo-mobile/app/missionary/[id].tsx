@@ -1,10 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  TextInput,
+} from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   useGetMissionary,
   useFollowMissionary,
   useListMissionaryContributionAvailabilities,
+  useCreateContributionAvailabilityFeedback,
   useUnfollowMissionary,
   getGetMissionaryQueryKey,
   getListMissionaryContributionAvailabilitiesQueryKey,
@@ -20,6 +28,7 @@ import {
   PUBLIC_PRIVACY_QUERY_OPTIONS,
 } from '../../lib/privacy';
 import { useAuth } from '../../context/AuthContext';
+import { useOfflineMode } from '../../context/OfflineContext';
 import { formatTimeAgo } from '../../lib/utils';
 
 export default function MissionaryProfileScreen() {
@@ -28,6 +37,12 @@ export default function MissionaryProfileScreen() {
   const { bottom } = useAppSafeAreaInsets();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isOfflineMode } = useOfflineMode();
+  const [feedbackDrafts, setFeedbackDrafts] = React.useState<Record<string, string>>({});
+  const [feedbackError, setFeedbackError] = React.useState<string | null>(null);
+  const [submittingAvailabilityId, setSubmittingAvailabilityId] = React.useState<string | null>(
+    null,
+  );
   const isOwner =
     user?.role === 'MISSIONARY' && user.missionaryProfileId === id;
 
@@ -60,6 +75,7 @@ export default function MissionaryProfileScreen() {
   );
   const followMutation = useFollowMissionary();
   const unfollowMutation = useUnfollowMissionary();
+  const feedbackMutation = useCreateContributionAvailabilityFeedback();
 
   const handleFollow = () => {
     if (!profile) return;
@@ -78,6 +94,38 @@ export default function MissionaryProfileScreen() {
               String(query.queryKey[0]).startsWith('/api/missionaries') ||
               String(query.queryKey[0]).startsWith('/api/posts'),
           }),
+      },
+    );
+  };
+
+  const submitFeedback = (availabilityId: string, messageOverride?: string) => {
+    if (!id) return;
+    if (isOfflineMode) {
+      setFeedbackError('Você está sem conexão. O retorno não foi enviado.');
+      return;
+    }
+    const message = (messageOverride ?? feedbackDrafts[availabilityId] ?? '').trim();
+    if (!message) {
+      setFeedbackError('Escreva uma mensagem antes de enviar.');
+      return;
+    }
+    setFeedbackError(null);
+    setSubmittingAvailabilityId(availabilityId);
+    feedbackMutation.mutate(
+      { missionaryId: id, availabilityId, data: { message } },
+      {
+        onSuccess: () => {
+          setFeedbackDrafts((current) => ({ ...current, [availabilityId]: '' }));
+          void refetchAvailabilities();
+        },
+        onError: () => {
+          setFeedbackError(
+            isOfflineMode
+              ? 'Você está sem conexão. O retorno não foi enviado.'
+              : 'Não foi possível enviar o retorno. Verifique sua conexão e tente novamente.',
+          );
+        },
+        onSettled: () => setSubmittingAvailabilityId(null),
       },
     );
   };
@@ -203,24 +251,117 @@ export default function MissionaryProfileScreen() {
                         ? 'pessoa disponível'
                         : 'pessoas disponíveis'}
                     </Text>
-                    {entries.map((availability) => (
-                      <View key={availability.id} style={styles.supporterRow}>
-                        <Feather name="user" size={16} color={colors.primary} />
-                        <Text
-                          style={[styles.supporterName, { color: colors.foreground }]}
-                        >
-                          {availability.supporterName}
-                        </Text>
-                        <Text
-                          style={[styles.supporterTime, { color: colors.mutedForeground }]}
-                        >
-                          {formatTimeAgo(availability.createdAt)}
-                        </Text>
-                      </View>
-                    ))}
+                    {entries.map((availability) => {
+                      const isSubmitting =
+                        submittingAvailabilityId === availability.id &&
+                        feedbackMutation.isPending;
+                      return (
+                        <View key={availability.id} style={styles.supporterEntry}>
+                          <View style={styles.supporterRow}>
+                            <Feather name="user" size={16} color={colors.primary} />
+                            <Text
+                              style={[styles.supporterName, { color: colors.foreground }]}
+                            >
+                              {availability.supporterName}
+                            </Text>
+                            <Text
+                              style={[styles.supporterTime, { color: colors.mutedForeground }]}
+                            >
+                              {formatTimeAgo(availability.createdAt)}
+                            </Text>
+                          </View>
+                          {availability.feedback && (
+                            <View
+                              style={[
+                                styles.sentFeedback,
+                                { backgroundColor: colors.secondary },
+                              ]}
+                            >
+                              <Text style={[styles.sentFeedbackLabel, { color: colors.primary }]}>
+                                Retorno enviado
+                              </Text>
+                              <Text style={[styles.sentFeedbackText, { color: colors.foreground }]}>
+                                {availability.feedback.message}
+                              </Text>
+                            </View>
+                          )}
+                          <TextInput
+                            value={feedbackDrafts[availability.id] ?? ''}
+                            onChangeText={(value) =>
+                              setFeedbackDrafts((current) => ({
+                                ...current,
+                                [availability.id]: value,
+                              }))
+                            }
+                            placeholder={
+                              availability.feedback
+                                ? 'Escreva outro retorno (opcional)'
+                                : 'Escreva um retorno curto (opcional)'
+                            }
+                            placeholderTextColor={colors.mutedForeground}
+                            maxLength={280}
+                            multiline
+                            style={[
+                              styles.feedbackInput,
+                              {
+                                color: colors.foreground,
+                                borderColor: colors.border,
+                                backgroundColor: colors.background,
+                              },
+                            ]}
+                            accessibilityLabel={`Retorno para ${availability.supporterName}`}
+                            testID={`feedback-input-${availability.id}`}
+                          />
+                          <View style={styles.feedbackActions}>
+                            <Button
+                              title="Agradecer"
+                              icon="heart"
+                              variant="secondary"
+                              size="sm"
+                              disabled={isOfflineMode || isSubmitting}
+                              loading={isSubmitting}
+                              onPress={() =>
+                                submitFeedback(
+                                  availability.id,
+                                  'Obrigado por se disponibilizar! Vamos seguir em contato por aqui.',
+                                )
+                              }
+                              testID={`acknowledge-feedback-${availability.id}`}
+                            />
+                            <Button
+                              title="Enviar retorno"
+                              icon="send"
+                              variant="outline"
+                              size="sm"
+                              disabled={
+                                isOfflineMode ||
+                                isSubmitting ||
+                                !(feedbackDrafts[availability.id] ?? '').trim()
+                              }
+                              loading={isSubmitting}
+                              onPress={() => submitFeedback(availability.id)}
+                              testID={`send-feedback-${availability.id}`}
+                            />
+                          </View>
+                        </View>
+                      );
+                    })}
                   </View>
                 );
               })
+          )}
+          {isOfflineMode && (
+            <Text style={[styles.offlineHint, { color: colors.warning }]}>
+              Você está sem conexão. Conecte-se para enviar um retorno.
+            </Text>
+          )}
+          {feedbackError && (
+            <Text
+              style={[styles.availabilityError, { color: colors.destructive }]}
+              accessibilityRole="alert"
+            >
+              {feedbackError}
+            </Text>
           )}
         </View>
       )}
@@ -250,6 +391,21 @@ const styles = StyleSheet.create({
   availabilityTitle: { fontSize: 16, fontFamily: 'Inter_700Bold' },
   availabilityCount: { fontSize: 13, fontFamily: 'Inter_500Medium' },
   supporterRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  supporterEntry: { gap: 10, paddingTop: 4 },
   supporterName: { flex: 1, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   supporterTime: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  sentFeedback: { borderRadius: 12, padding: 10, gap: 3 },
+  sentFeedbackLabel: { fontSize: 12, fontFamily: 'Inter_700Bold' },
+  sentFeedbackText: { fontSize: 14, lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  feedbackInput: {
+    minHeight: 58,
+    maxHeight: 110,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    textAlignVertical: 'top',
+    fontFamily: 'Inter_400Regular',
+  },
+  feedbackActions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  offlineHint: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_500Medium' },
 });

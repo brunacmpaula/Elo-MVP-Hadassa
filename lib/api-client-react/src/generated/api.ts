@@ -23,6 +23,8 @@ import type {
   Comment,
   CommentInput,
   ContributionAvailability,
+  ContributionAvailabilityFeedback,
+  ContributionAvailabilityFeedbackInput,
   ContributionAvailabilityState,
   FollowState,
   HealthStatus,
@@ -1474,6 +1476,80 @@ export function useListMissionaryContributionAvailabilities<TData = Awaited<Retu
 
 
 
+
+export const getCreateContributionAvailabilityFeedbackUrl = (missionaryId: string,
+    availabilityId: string,) => {
+
+
+
+
+  return `/api/missionaries/${missionaryId}/contribution-availabilities/${availabilityId}/feedback`
+}
+
+/**
+ * @summary Send a short response to a supporter availability
+ */
+export const createContributionAvailabilityFeedback = async (missionaryId: string,
+    availabilityId: string,
+    contributionAvailabilityFeedbackInput: ContributionAvailabilityFeedbackInput, options?: Parameters<typeof customFetch>[1]): Promise<ContributionAvailabilityFeedback> => {
+
+  return customFetch<ContributionAvailabilityFeedback>(getCreateContributionAvailabilityFeedbackUrl(missionaryId,availabilityId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(contributionAvailabilityFeedbackInput)
+  }
+);}
+
+
+
+
+
+export const getCreateContributionAvailabilityFeedbackMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContributionAvailabilityFeedback>>, TError,{missionaryId: string;availabilityId: string;data: BodyType<ContributionAvailabilityFeedbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createContributionAvailabilityFeedback>>, TError,{missionaryId: string;availabilityId: string;data: BodyType<ContributionAvailabilityFeedbackInput>}, TContext> => {
+
+const mutationKey = ['createContributionAvailabilityFeedback'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContributionAvailabilityFeedback>>, {missionaryId: string;availabilityId: string;data: BodyType<ContributionAvailabilityFeedbackInput>}> = (props) => {
+          const {missionaryId,availabilityId,data} = props ?? {};
+
+          return  createContributionAvailabilityFeedback(missionaryId,availabilityId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateContributionAvailabilityFeedbackMutationResult = NonNullable<Awaited<ReturnType<typeof createContributionAvailabilityFeedback>>>
+    export type CreateContributionAvailabilityFeedbackMutationBody = BodyType<ContributionAvailabilityFeedbackInput>
+    export type CreateContributionAvailabilityFeedbackMutationError = ErrorType<void>
+
+    /**
+ * @summary Send a short response to a supporter availability
+ */
+export const useCreateContributionAvailabilityFeedback = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContributionAvailabilityFeedback>>, TError,{missionaryId: string;availabilityId: string;data: BodyType<ContributionAvailabilityFeedbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createContributionAvailabilityFeedback>>,
+        TError,
+        {missionaryId: string;availabilityId: string;data: BodyType<ContributionAvailabilityFeedbackInput>},
+        TContext
+      > => {
+      return useMutation(getCreateContributionAvailabilityFeedbackMutationOptions(options));
+    }
 
 export const getSyncOperationsUrl = () => {
 

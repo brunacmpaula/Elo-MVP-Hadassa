@@ -5,10 +5,12 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ContributionAvailabilityFeedback } from './contributionAvailabilityFeedback';
 
 export interface ContributionAvailability {
   id: string;
   postId: string;
   supporterName: string;
   createdAt: Date;
+  feedback: ContributionAvailabilityFeedback | null;
 }

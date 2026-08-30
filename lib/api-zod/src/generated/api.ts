@@ -103,6 +103,14 @@ export const GetMissionaryResponse = zod.object({
   "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
   "contributionAvailabilityCount": zod.number().min(getMissionaryResponseTwoPostsItemContributionAvailabilityCountMin).describe('Number of supporters who made themselves available for this need.'),
   "contributionAvailableByMe": zod.boolean().describe('Whether the authenticated supporter is available for this need.'),
+  "contributionFeedback": zod.object({
+  "id": zod.string(),
+  "availabilityId": zod.string(),
+  "postId": zod.string(),
+  "message": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).nullable().describe('The private response sent to the authenticated supporter for this need.'),
   "media": zod.array(zod.object({
   "clientMediaId": zod.string().min(1),
   "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
@@ -217,6 +225,14 @@ export const ListPostsResponseItem = zod.object({
   "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
   "contributionAvailabilityCount": zod.number().min(listPostsResponseContributionAvailabilityCountMin).describe('Number of supporters who made themselves available for this need.'),
   "contributionAvailableByMe": zod.boolean().describe('Whether the authenticated supporter is available for this need.'),
+  "contributionFeedback": zod.object({
+  "id": zod.string(),
+  "availabilityId": zod.string(),
+  "postId": zod.string(),
+  "message": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).nullable().describe('The private response sent to the authenticated supporter for this need.'),
   "media": zod.array(zod.object({
   "clientMediaId": zod.string().min(1),
   "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
@@ -298,6 +314,14 @@ export const CreatePostResponse = zod.object({
   "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
   "contributionAvailabilityCount": zod.number().min(createPostResponseContributionAvailabilityCountMin).describe('Number of supporters who made themselves available for this need.'),
   "contributionAvailableByMe": zod.boolean().describe('Whether the authenticated supporter is available for this need.'),
+  "contributionFeedback": zod.object({
+  "id": zod.string(),
+  "availabilityId": zod.string(),
+  "postId": zod.string(),
+  "message": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).nullable().describe('The private response sent to the authenticated supporter for this need.'),
   "media": zod.array(zod.object({
   "clientMediaId": zod.string().min(1),
   "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
@@ -353,6 +377,14 @@ export const GetPostResponse = zod.object({
   "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
   "contributionAvailabilityCount": zod.number().min(getPostResponseContributionAvailabilityCountMin).describe('Number of supporters who made themselves available for this need.'),
   "contributionAvailableByMe": zod.boolean().describe('Whether the authenticated supporter is available for this need.'),
+  "contributionFeedback": zod.object({
+  "id": zod.string(),
+  "availabilityId": zod.string(),
+  "postId": zod.string(),
+  "message": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).nullable().describe('The private response sent to the authenticated supporter for this need.'),
   "media": zod.array(zod.object({
   "clientMediaId": zod.string().min(1),
   "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
@@ -417,6 +449,14 @@ export const UpdatePostResponse = zod.object({
   "missionarySaved": zod.boolean().describe('Whether the authenticated supporter saved this missionary.'),
   "contributionAvailabilityCount": zod.number().min(updatePostResponseContributionAvailabilityCountMin).describe('Number of supporters who made themselves available for this need.'),
   "contributionAvailableByMe": zod.boolean().describe('Whether the authenticated supporter is available for this need.'),
+  "contributionFeedback": zod.object({
+  "id": zod.string(),
+  "availabilityId": zod.string(),
+  "postId": zod.string(),
+  "message": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).nullable().describe('The private response sent to the authenticated supporter for this need.'),
   "media": zod.array(zod.object({
   "clientMediaId": zod.string().min(1),
   "uri": zod.string().describe('Compressed image data URL kept locally until synchronization.'),
@@ -564,9 +604,43 @@ export const ListMissionaryContributionAvailabilitiesResponseItem = zod.object({
   "id": zod.string(),
   "postId": zod.string(),
   "supporterName": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "feedback": zod.object({
+  "id": zod.string(),
+  "availabilityId": zod.string(),
+  "postId": zod.string(),
+  "message": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).nullable()
 })
 export const ListMissionaryContributionAvailabilitiesResponse = zod.array(ListMissionaryContributionAvailabilitiesResponseItem)
+
+
+/**
+ * @summary Send a short response to a supporter availability
+ */
+export const CreateContributionAvailabilityFeedbackParams = zod.object({
+  "missionaryId": zod.coerce.string(),
+  "availabilityId": zod.coerce.string()
+})
+
+export const createContributionAvailabilityFeedbackBodyMessageMax = 280;
+
+
+
+export const CreateContributionAvailabilityFeedbackBody = zod.object({
+  "message": zod.string().min(1).max(createContributionAvailabilityFeedbackBodyMessageMax)
+})
+
+export const CreateContributionAvailabilityFeedbackResponse = zod.object({
+  "id": zod.string(),
+  "availabilityId": zod.string(),
+  "postId": zod.string(),
+  "message": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
 
 
 /**

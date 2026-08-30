@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Comment } from './comment';
+import type { ContributionAvailabilityFeedback } from './contributionAvailabilityFeedback';
 import type { PostMedia } from './postMedia';
 import type { PostStatus } from './postStatus';
 import type { PostType } from './postType';
@@ -34,6 +35,8 @@ export interface Post {
   contributionAvailabilityCount: number;
   /** Whether the authenticated supporter is available for this need. */
   contributionAvailableByMe: boolean;
+  /** The private response sent to the authenticated supporter for this need. */
+  contributionFeedback: ContributionAvailabilityFeedback | null;
   media: PostMedia[];
   comments: Comment[];
 }

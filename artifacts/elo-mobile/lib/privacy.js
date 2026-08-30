@@ -20,7 +20,11 @@ export function getVisibleMissionaries(missionaries, isFetching) {
 }
 
 export function hideCachedPostFields(post) {
-  const { missionaryCountry: _country, ...safePost } = post;
+  const {
+    missionaryCountry: _country,
+    contributionFeedback: _contributionFeedback,
+    ...safePost
+  } = post;
   return safePost;
 }
 

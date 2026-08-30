@@ -19,7 +19,9 @@ export function getVisibleMissionaries(
   isFetching: boolean,
 ): Missionary[] | undefined;
 
-export function hideCachedPostFields(post: Post): Post;
+export function hideCachedPostFields(post: Post): Omit<Post, 'contributionFeedback'> & {
+  contributionFeedback: null;
+};
 
 export function hideCachedMissionaryProfileFields(
   profile: MissionaryProfile,

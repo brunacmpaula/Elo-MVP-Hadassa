@@ -329,6 +329,28 @@ export default function PostDetailScreen() {
             <Text style={[styles.availabilityHint, { color: colors.mutedForeground }]}>
               Isso registra apenas seu interesse. Nenhum valor ou dado financeiro será solicitado.
             </Text>
+            {visiblePost.contributionFeedback && (
+              <View
+                style={[
+                  styles.contributionFeedback,
+                  { backgroundColor: colors.secondary, borderColor: colors.border },
+                ]}
+                testID="contribution-feedback"
+              >
+                <View style={styles.feedbackHeading}>
+                  <Feather name="message-circle" size={17} color={colors.primary} />
+                  <Text style={[styles.feedbackTitle, { color: colors.primary }]}>
+                    Retorno do missionário
+                  </Text>
+                </View>
+                <Text style={[styles.feedbackMessage, { color: colors.foreground }]}>
+                  {visiblePost.contributionFeedback.message}
+                </Text>
+                <Text style={[styles.feedbackTime, { color: colors.mutedForeground }]}>
+                  Enviado {formatTimeAgo(visiblePost.contributionFeedback.updatedAt)}
+                </Text>
+              </View>
+            )}
             {availabilityError && (
               <Text
                 style={[styles.availabilityError, { color: colors.destructive }]}
@@ -451,6 +473,11 @@ const styles = StyleSheet.create({
   availabilityStatus: { fontSize: 14, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
   availabilityHint: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   availabilityError: { fontSize: 13, lineHeight: 18, fontFamily: 'Inter_500Medium', textAlign: 'center' },
+  contributionFeedback: { width: '100%', borderWidth: 1, borderRadius: 14, padding: 14, gap: 8 },
+  feedbackHeading: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  feedbackTitle: { fontSize: 14, fontFamily: 'Inter_700Bold' },
+  feedbackMessage: { fontSize: 15, lineHeight: 21, fontFamily: 'Inter_400Regular' },
+  feedbackTime: { fontSize: 12, fontFamily: 'Inter_400Regular' },
   comments: { padding: 24, borderTopWidth: 1, gap: 12 },
   commentsTitle: { fontSize: 20, fontFamily: 'Inter_700Bold' },
   emptyComments: { fontSize: 14, fontFamily: 'Inter_400Regular' },

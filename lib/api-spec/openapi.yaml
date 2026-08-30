@@ -394,6 +394,37 @@ paths:
           description: Only the profile owner can access availabilities
         "404":
           description: Not found
+  /missionaries/{missionaryId}/contribution-availabilities/{availabilityId}/feedback:
+    post:
+      operationId: createContributionAvailabilityFeedback
+      tags: [contribution-availability]
+      summary: Send a short response to a supporter availability
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MissionaryId"
+        - $ref: "#/components/parameters/AvailabilityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContributionAvailabilityFeedbackInput"
+      responses:
+        "201":
+          description: Sent response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionAvailabilityFeedback"
+        "400":
+          description: Invalid response or availability
+        "401":
+          description: Authentication required
+        "403":
+          description: Only the profile owner can send responses
+        "404":
+          description: Not found
   /sync:
     post:
       operationId: syncOperations
@@ -432,6 +463,12 @@ components:
         type: string
     PostId:
       name: postId
+      in: path
+      required: true
+      schema:
+        type: string
+    AvailabilityId:
+      name: availabilityId
       in: path
       required: true
       schema:
@@ -522,7 +559,7 @@ components:
           type: boolean
     Post:
       type: object
-      required: [id, missionaryId, missionaryName, type, title, content, status, createdAt, updatedAt, prayerCount, prayedByMe, missionarySaved, contributionAvailabilityCount, contributionAvailableByMe, media, comments]
+      required: [id, missionaryId, missionaryName, type, title, content, status, createdAt, updatedAt, prayerCount, prayedByMe, missionarySaved, contributionAvailabilityCount, contributionAvailableByMe, contributionFeedback, media, comments]
       properties:
         id: { type: string }
         missionaryId: { type: string }
@@ -552,6 +589,11 @@ components:
         contributionAvailableByMe:
           type: boolean
           description: Whether the authenticated supporter is available for this need.
+        contributionFeedback:
+          allOf:
+            - $ref: "#/components/schemas/ContributionAvailabilityFeedback"
+          nullable: true
+          description: The private response sent to the authenticated supporter for this need.
         media:
           type: array
           items:
@@ -603,12 +645,34 @@ components:
         availabilityCount: { type: number, minimum: 0 }
     ContributionAvailability:
       type: object
-      required: [id, postId, supporterName, createdAt]
+      required: [id, postId, supporterName, createdAt, feedback]
       properties:
         id: { type: string }
         postId: { type: string }
         supporterName: { type: string }
         createdAt: { type: string, format: date-time }
+        feedback:
+          allOf:
+            - $ref: "#/components/schemas/ContributionAvailabilityFeedback"
+          nullable: true
+    ContributionAvailabilityFeedbackInput:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 280
+    ContributionAvailabilityFeedback:
+      type: object
+      required: [id, availabilityId, postId, message, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        availabilityId: { type: string }
+        postId: { type: string }
+        message: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     PostMediaInput:
       type: object
       required: [clientMediaId, uri, thumbnailUri, mimeType, sizeBytes, width, height]

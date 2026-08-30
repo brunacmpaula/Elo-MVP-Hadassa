@@ -201,6 +201,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       prayerCount: 0,
       prayedByMe: false,
       missionarySaved: false,
+      contributionFeedback: null,
       contributionAvailabilityCount: 0,
       contributionAvailableByMe: false,
       media: media.map((item) => ({

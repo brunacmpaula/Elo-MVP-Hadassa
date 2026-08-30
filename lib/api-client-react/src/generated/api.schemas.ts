@@ -93,6 +93,15 @@ export const PostStatus = {
   SYNC_FAILED: 'SYNC_FAILED',
 } as const;
 
+export interface ContributionAvailabilityFeedback {
+  id: string;
+  availabilityId: string;
+  postId: string;
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type PostMediaInputMimeType = typeof PostMediaInputMimeType[keyof typeof PostMediaInputMimeType];
 
 
@@ -158,6 +167,8 @@ export interface Post {
   contributionAvailabilityCount: number;
   /** Whether the authenticated supporter is available for this need. */
   contributionAvailableByMe: boolean;
+  /** The private response sent to the authenticated supporter for this need. */
+  contributionFeedback: ContributionAvailabilityFeedback | null;
   media: PostMedia[];
   comments: Comment[];
 }
@@ -233,6 +244,15 @@ export interface ContributionAvailability {
   postId: string;
   supporterName: string;
   createdAt: string;
+  feedback: ContributionAvailabilityFeedback | null;
+}
+
+export interface ContributionAvailabilityFeedbackInput {
+  /**
+     * @minLength 1
+     * @maxLength 280
+     */
+  message: string;
 }
 
 export interface CommentInput {
