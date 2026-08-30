@@ -5,6 +5,7 @@ import {
   PostInputType,
   PostMediaInput,
   createPost,
+  getGetPostQueryKey,
   getListPostsQueryKey,
 } from '@workspace/api-client-react';
 import { NetworkStateType } from 'expo-network';
@@ -16,8 +17,11 @@ import {
   dedupeQueue,
   enqueuePendingPost,
   getPendingOperations,
+  hasUnprocessedPendingOperations,
   markOperationFailed,
+  markOperationSyncing,
   markOperationSucceeded,
+  mergePublishedPost,
   getQueueSummary,
   getSyncBlockReason,
   type SyncOp,
@@ -40,6 +44,8 @@ type SyncContextType = {
   syncOnlyOnWifi: boolean;
   setSyncOnlyOnWifi: (enabled: boolean) => Promise<void>;
   queueSummary: ReturnType<typeof getQueueSummary>;
+  reconciledPostIds: Record<string, string>;
+  isSyncStateLoaded: boolean;
   syncStatus:
     | 'CHECKING_CONNECTION'
     | 'OFFLINE'
@@ -53,6 +59,7 @@ type SyncContextType = {
 type StoredSyncState = {
   queue: SyncOp[];
   localPosts: Post[];
+  reconciledPostIds: Record<string, string>;
 };
 
 const SyncContext = createContext<SyncContextType | null>(null);
@@ -70,12 +77,18 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   const [queue, setQueue] = useState<SyncOp[]>([]);
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [reconciledPostIds, setReconciledPostIds] = useState<
+    Record<string, string>
+  >({});
   const [syncOnlyOnWifi, setSyncOnlyOnWifiState] = useState(true);
   const [isStateLoaded, setIsStateLoaded] = useState(false);
   const queueRef = useRef<SyncOp[]>([]);
   const localPostsRef = useRef<Post[]>([]);
+  const reconciledPostIdsRef = useRef<Record<string, string>>({});
   const isSyncingRef = useRef(false);
+  const syncGenerationRef = useRef(0);
   const stateReadyRef = useRef<Promise<void> | null>(null);
+  const persistenceRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     let isMounted = true;
@@ -87,11 +100,17 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       ]);
       let nextQueue: SyncOp[] = [];
       let nextPosts: Post[] = [];
+      let nextReconciledPostIds: Record<string, string> = {};
 
       if (storedState) {
         const parsed = JSON.parse(storedState) as Partial<StoredSyncState>;
         nextQueue = Array.isArray(parsed.queue) ? parsed.queue : [];
         nextPosts = Array.isArray(parsed.localPosts) ? parsed.localPosts : [];
+        nextReconciledPostIds =
+          parsed.reconciledPostIds &&
+          typeof parsed.reconciledPostIds === 'object'
+            ? parsed.reconciledPostIds
+            : {};
       } else {
         // Read the old keys once so existing offline work survives the storage
         // format upgrade.
@@ -108,10 +127,12 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
       queueRef.current = dedupeQueue(nextQueue);
       localPostsRef.current = dedupePosts(nextPosts);
+      reconciledPostIdsRef.current = nextReconciledPostIds;
 
       if (isMounted) {
         setQueue(queueRef.current);
         setLocalPosts(localPostsRef.current);
+        setReconciledPostIds(reconciledPostIdsRef.current);
         setIsStateLoaded(true);
       }
     };
@@ -129,12 +150,21 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const persistState = async (nextQueue: SyncOp[], nextPosts: Post[]) => {
+  const persistState = (
+    nextQueue: SyncOp[],
+    nextPosts: Post[],
+    nextReconciledPostIds = reconciledPostIdsRef.current,
+  ) => {
     const state: StoredSyncState = {
       queue: dedupeQueue(nextQueue),
       localPosts: dedupePosts(nextPosts),
+      reconciledPostIds: nextReconciledPostIds,
     };
-    await AsyncStorage.setItem(SYNC_STATE_KEY, JSON.stringify(state));
+    const serialized = JSON.stringify(state);
+    persistenceRef.current = persistenceRef.current
+      .catch(() => undefined)
+      .then(() => AsyncStorage.setItem(SYNC_STATE_KEY, serialized));
+    return persistenceRef.current;
   };
 
   const applyState = (nextQueue: SyncOp[], nextPosts: Post[]) => {
@@ -159,7 +189,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     const localId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const newPost: Post = {
       id: localId,
-      missionaryId: user?.id || 'm1',
+      missionaryId: user?.missionaryProfileId || user?.id || 'm1',
       missionaryName: user?.name || 'Missionário',
       missionaryCountry: 'Desconhecido',
       type: type as any,
@@ -219,9 +249,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     
     const pending = getPendingOperations(queueRef.current);
     if (pending.length === 0) return;
+    const processedOperationIds = new Set(
+      pending.map((operation) => operation.id),
+    );
 
     isSyncingRef.current = true;
     setIsSyncing(true);
+    const syncGeneration = syncGenerationRef.current;
     let currentQueue = [...queueRef.current];
     let currentPosts = [...localPostsRef.current];
     const originalQueueIds = new Set(currentQueue.map((operation) => operation.id));
@@ -244,9 +278,12 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
     try {
       for (const op of pending) {
-        currentQueue = currentQueue.map((q) =>
-          q.id === op.id ? { ...q, status: 'SYNCING' } : q,
+        const syncing = markOperationSyncing(
+          { queue: currentQueue, localPosts: currentPosts },
+          op.id,
         );
+        currentQueue = syncing.queue;
+        currentPosts = syncing.localPosts;
         applySyncState();
 
         try {
@@ -259,15 +296,36 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
               clientOperationId: op.payload.clientOperationId,
               media: op.payload.media,
             });
+            if (syncGeneration !== syncGenerationRef.current) return;
 
             const succeeded = markOperationSucceeded(
               { queue: currentQueue, localPosts: currentPosts },
               op.id,
+              res,
             );
             currentQueue = succeeded.queue;
             currentPosts = succeeded.localPosts;
+            const nextReconciledPostIds = {
+              ...reconciledPostIdsRef.current,
+              [op.id]: res.id,
+            };
+            reconciledPostIdsRef.current = nextReconciledPostIds;
+            setReconciledPostIds(nextReconciledPostIds);
+
+            const affectedFeedKeys = [
+              getListPostsQueryKey(),
+              getListPostsQueryKey({ mine: true }),
+              getListPostsQueryKey({ missionaryId: res.missionaryId }),
+            ];
+            for (const queryKey of affectedFeedKeys) {
+              queryClient.setQueryData<Post[]>(queryKey, (posts) =>
+                mergePublishedPost(posts, res),
+              );
+            }
+            queryClient.setQueryData(getGetPostQueryKey(res.id), res);
           }
         } catch (err) {
+          if (syncGeneration !== syncGenerationRef.current) return;
           const failed = markOperationFailed(
             { queue: currentQueue, localPosts: currentPosts },
             op.id,
@@ -290,22 +348,49 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       const finalQueue = dedupeQueue([...currentQueue, ...concurrentQueue]);
       const finalPosts = dedupePosts([...currentPosts, ...concurrentPosts]);
 
+      if (syncGeneration !== syncGenerationRef.current) return;
       applyState(finalQueue, finalPosts);
-      await persistState(finalQueue, finalPosts);
-      queryClient.invalidateQueries({ queryKey: getListPostsQueryKey() });
+      await persistState(
+        finalQueue,
+        finalPosts,
+        reconciledPostIdsRef.current,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: getListPostsQueryKey(),
+      });
     } finally {
-      isSyncingRef.current = false;
-      setIsSyncing(false);
+      if (syncGeneration === syncGenerationRef.current) {
+        isSyncingRef.current = false;
+        setIsSyncing(false);
+        if (
+          hasUnprocessedPendingOperations(
+            queueRef.current,
+            processedOperationIds,
+          )
+        ) {
+          setTimeout(() => void syncNow(), 0);
+        }
+      }
     }
   };
 
   const clearLocal = async () => {
+    syncGenerationRef.current += 1;
+    isSyncingRef.current = false;
+    setIsSyncing(false);
     applyState([], []);
-    await Promise.all([
-      AsyncStorage.removeItem(SYNC_STATE_KEY),
-      AsyncStorage.removeItem(LEGACY_POSTS_KEY),
-      AsyncStorage.removeItem(LEGACY_QUEUE_KEY),
-    ]);
+    reconciledPostIdsRef.current = {};
+    setReconciledPostIds({});
+    persistenceRef.current = persistenceRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        await Promise.all([
+          AsyncStorage.removeItem(SYNC_STATE_KEY),
+          AsyncStorage.removeItem(LEGACY_POSTS_KEY),
+          AsyncStorage.removeItem(LEGACY_QUEUE_KEY),
+        ]);
+      });
+    await persistenceRef.current;
   };
 
   const setSyncOnlyOnWifi = async (enabled: boolean) => {
@@ -360,6 +445,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         syncOnlyOnWifi,
         setSyncOnlyOnWifi,
         queueSummary,
+        reconciledPostIds,
+        isSyncStateLoaded: isStateLoaded,
         syncStatus,
       }}
     >

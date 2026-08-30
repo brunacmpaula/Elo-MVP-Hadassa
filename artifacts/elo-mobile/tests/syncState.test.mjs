@@ -47,8 +47,11 @@ test('removes cached private fields while a supporter device refreshes', () => {
 import {
   enqueuePendingPost,
   getPendingOperations,
+  hasUnprocessedPendingOperations,
   markOperationFailed,
+  markOperationSyncing,
   markOperationSucceeded,
+  mergePublishedPost,
   getQueueSummary,
   getSyncBlockReason,
 } from '../context/syncState.ts';
@@ -114,6 +117,31 @@ test('exposes failed and pending operations when reconnection triggers synchroni
   assert.equal(pending[0]?.id, operationId);
 });
 
+test('detects a new post enqueued while another synchronization is in flight', () => {
+  const concurrentOperation = makeOperation({
+    id: 'local-concurrent-post',
+    payload: {
+      ...makeOperation().payload,
+      clientOperationId: 'local-concurrent-post',
+    },
+  });
+
+  assert.equal(
+    hasUnprocessedPendingOperations(
+      [makeOperation(), concurrentOperation],
+      new Set([operationId]),
+    ),
+    true,
+  );
+  assert.equal(
+    hasUnprocessedPendingOperations(
+      [makeOperation({ status: 'FAILED' })],
+      new Set([operationId]),
+    ),
+    false,
+  );
+});
+
 test('preserves a failed operation and its local post for another attempt', () => {
   const failed = markOperationFailed(
     {
@@ -130,6 +158,19 @@ test('preserves a failed operation and its local post for another attempt', () =
   assert.equal(failed.localPosts[0]?.status, 'SYNC_FAILED');
 });
 
+test('shows a failed post as pending again while a retry is in progress', () => {
+  const syncing = markOperationSyncing(
+    {
+      queue: [makeOperation({ status: 'FAILED', retryCount: 1 })],
+      localPosts: [makePost({ status: 'SYNC_FAILED' })],
+    },
+    operationId,
+  );
+
+  assert.equal(syncing.queue[0]?.status, 'SYNCING');
+  assert.equal(syncing.localPosts[0]?.status, 'PENDING_SYNC');
+});
+
 test('acknowledges the same identifier without duplicate queue entries or posts', () => {
   const published = makePost({
     id: 'post-server-1',
@@ -142,10 +183,78 @@ test('acknowledges the same identifier without duplicate queue entries or posts'
       localPosts: [makePost(), makePost()],
     },
     operationId,
+    published,
   );
 
   assert.equal(acknowledged.queue.length, 0);
   assert.equal(acknowledged.localPosts.length, 0);
+});
+
+test('reconciles a confirmed post without duplicating an existing server item', () => {
+  const published = makePost({
+    id: 'post-server-1',
+    status: 'PUBLISHED',
+    createdAt: '2026-08-30T03:01:00.000Z',
+  });
+
+  const acknowledged = markOperationSucceeded(
+    {
+      queue: [makeOperation()],
+      localPosts: [makePost(), published],
+    },
+    operationId,
+    published,
+  );
+
+  assert.equal(acknowledged.localPosts.length, 1);
+  assert.equal(acknowledged.localPosts[0]?.id, published.id);
+});
+
+test('merges the confirmed post into feed caches in newest-first order', () => {
+  const older = makePost({
+    id: 'post-older',
+    status: 'PUBLISHED',
+    createdAt: '2026-08-30T02:00:00.000Z',
+  });
+  const published = makePost({
+    id: 'post-server-1',
+    status: 'PUBLISHED',
+    createdAt: '2026-08-30T03:01:00.000Z',
+  });
+
+  const feed = mergePublishedPost([older, published], published);
+
+  assert.deepEqual(
+    feed?.map((post) => post.id),
+    ['post-server-1', 'post-older'],
+  );
+  assert.deepEqual(mergePublishedPost(undefined, published), [published]);
+});
+
+test('adopts a newer canonical server version after acknowledgement', () => {
+  const acknowledged = markOperationSucceeded(
+    {
+      queue: [makeOperation()],
+      localPosts: [makePost()],
+    },
+    operationId,
+    makePost({ id: 'post-server-1', status: 'PUBLISHED' }),
+  );
+  const refreshedServerPost = makePost({
+    id: 'post-server-1',
+    status: 'PUBLISHED',
+    prayerCount: 7,
+    updatedAt: '2026-08-30T04:00:00.000Z',
+  });
+
+  const refreshedFeed = mergePublishedPost(
+    [makePost({ id: 'post-server-1', status: 'PUBLISHED' })],
+    refreshedServerPost,
+  );
+
+  assert.equal(acknowledged.localPosts.length, 0);
+  assert.equal(refreshedFeed[0]?.prayerCount, 7);
+  assert.equal(refreshedFeed[0]?.updatedAt, '2026-08-30T04:00:00.000Z');
 });
 
 test('counts pending publications, images and total upload volume', () => {

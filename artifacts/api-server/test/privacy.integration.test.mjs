@@ -260,6 +260,29 @@ test("preferences persist and redact public profile data", async (t) => {
       [],
       "a publication saved without images must return an empty media payload",
     );
+    const ownerFeed = await jsonRequest("/posts?mine=true", {
+      headers: missionaryHeaders,
+    });
+    const supporterFeed = await jsonRequest("/posts", {
+      headers: supporterHeaders,
+    });
+    const otherMissionaryFeed = await jsonRequest("/posts?mine=true", {
+      headers: {
+        authorization: `Bearer ${otherMissionaryToken}`,
+      },
+    });
+    assert.equal(
+      ownerFeed.body.some((post) => post.id === ownerCreate.body.id),
+      true,
+    );
+    assert.equal(
+      supporterFeed.body.some((post) => post.id === ownerCreate.body.id),
+      true,
+    );
+    assert.equal(
+      otherMissionaryFeed.body.some((post) => post.id === ownerCreate.body.id),
+      false,
+    );
 
     const saveMissionary = await jsonRequest(
       "/missionaries/missionary-lucia/follow",

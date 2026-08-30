@@ -5,3 +5,4 @@
 - [Expo browser validation routing](expo-browser-validation-routing.md) — browser testers may hit the shared artifact route while appPreview correctly reaches Expo’s direct domain.
 - [Expo browser preview limitation](expo-browser-preview-limitation.md) — the Expo artifact's web proxy may 404 its bundle; native bundle builds remain the reliable validation path.
 - [Post persistence migrations](post-persistence-migrations.md) — backfill known legacy parents before enforcing foreign keys on existing child records.
+- [Offline sync state commits](offline-sync-state-commits.md) — serialize durable sync writes, persist local-to-server ID mappings, and invalidate stale in-flight generations on clear.

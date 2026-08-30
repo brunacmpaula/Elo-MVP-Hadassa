@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, TextInput } from 'react-native';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   useCreatePostComment,
   useCreateContributionAvailability,
@@ -24,34 +24,61 @@ import {
 } from '../../lib/privacy';
 import { useAuth } from '../../context/AuthContext';
 import { useOfflineMode } from '../../context/OfflineContext';
+import { useSync } from '../../context/SyncContext';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const { bottom } = useAppSafeAreaInsets();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { user } = useAuth();
   const { isOfflineMode } = useOfflineMode();
+  const {
+    localPosts,
+    reconciledPostIds,
+    syncStatus,
+    isSyncStateLoaded,
+  } = useSync();
   const [comment, setComment] = React.useState('');
   const [commentError, setCommentError] = React.useState<string | null>(null);
   const [availabilityError, setAvailabilityError] = React.useState<string | null>(null);
-  
-  const { data: post, isLoading, isFetching, refetch } = useGetPost(id!, {
+  const isLocalPostId = Boolean(id?.startsWith('local_'));
+  const localPost = isLocalPostId
+    ? localPosts.find((candidate) => candidate.id === id)
+    : undefined;
+
+  const { data: post, isLoading, isFetching, refetch } = useGetPost(id ?? '', {
     query: {
       ...PUBLIC_PRIVACY_QUERY_OPTIONS,
-      queryKey: getGetPostQueryKey(id!),
+      queryKey: getGetPostQueryKey(id ?? ''),
+      enabled: Boolean(id) && !isLocalPostId,
     },
   });
   const visiblePost =
-    post && isFetching ? hideCachedPostFields(post) : post;
+    localPost ?? (post && isFetching ? hideCachedPostFields(post) : post);
+
+  React.useEffect(() => {
+    if (!id || !isLocalPostId) return;
+    const serverId = reconciledPostIds[id];
+    if (serverId) {
+      router.replace(`/post/${serverId}`);
+    }
+  }, [id, isLocalPostId, reconciledPostIds, router]);
+
   useFocusEffect(
     React.useCallback(() => {
-      void refetch();
-    }, [refetch]),
+      if (!isLocalPostId) void refetch();
+    }, [isLocalPostId, refetch]),
   );
   const prayMutation = usePrayForPost();
   const removePrayerMutation = useRemovePrayer();
-  const commentsQuery = useListPostComments(id!);
+  const commentsQuery = useListPostComments(id ?? '', {
+    query: {
+      queryKey: getListPostCommentsQueryKey(id ?? ''),
+      enabled: Boolean(id) && !isLocalPostId,
+    },
+  });
   const commentMutation = useCreatePostComment();
   const createAvailabilityMutation = useCreateContributionAvailability();
   const removeAvailabilityMutation = useRemoveContributionAvailability();
@@ -151,10 +178,29 @@ export default function PostDetailScreen() {
     );
   };
 
-  if (isLoading || !visiblePost) {
+  if (
+    (!isLocalPostId && isLoading) ||
+    (isLocalPostId && !isSyncStateLoaded)
+  ) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!visiblePost) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <Text style={[styles.missingTitle, { color: colors.foreground }]}>
+          Publicação local não encontrada
+        </Text>
+        <Text
+          style={[styles.missingDescription, { color: colors.mutedForeground }]}
+        >
+          Volte ao Feed para verificar o estado da sincronização.
+        </Text>
+        <Button title="Voltar ao Feed" icon="arrow-left" onPress={() => router.back()} />
       </View>
     );
   }
@@ -182,8 +228,36 @@ export default function PostDetailScreen() {
         </View>
         
         {visiblePost.status !== 'PUBLISHED' && (
-          <View style={[styles.statusBadge, { backgroundColor: colors.warning + '20' }]}>
-            <Text style={[styles.statusText, { color: colors.warning }]}>Local</Text>
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor:
+                  (visiblePost.status === 'SYNC_FAILED'
+                    ? colors.destructive
+                    : colors.warning) + '20',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusText,
+                {
+                  color:
+                    visiblePost.status === 'SYNC_FAILED'
+                      ? colors.destructive
+                      : colors.warning,
+                },
+              ]}
+            >
+              {visiblePost.status === 'SYNC_FAILED'
+                ? 'Falha no envio'
+                : syncStatus === 'OFFLINE'
+                  ? 'Sem conexão'
+                  : syncStatus === 'WIFI_REQUIRED'
+                    ? 'Aguardando Wi‑Fi'
+                    : 'Aguardando envio'}
+            </Text>
           </View>
         )}
       </View>
@@ -210,14 +284,16 @@ export default function PostDetailScreen() {
           </Text>
         </View>
         
-        <Button
-          title={visiblePost.prayedByMe ? 'Estou Orando' : 'Orar'}
-          icon="heart"
-          variant={visiblePost.prayedByMe ? 'wine' : 'secondary'}
-          fullWidth
-          onPress={handlePray}
-          testID="pray-for-post"
-        />
+        {!isLocalPostId && (
+          <Button
+            title={visiblePost.prayedByMe ? 'Estou Orando' : 'Orar'}
+            icon="heart"
+            variant={visiblePost.prayedByMe ? 'wine' : 'secondary'}
+            fullWidth
+            onPress={handlePray}
+            testID="pray-for-post"
+          />
+        )}
         {user?.role === 'SUPPORTER' && visiblePost.type === 'NEED' && (
           <View style={styles.availability}>
             <Button
@@ -328,6 +404,19 @@ export default function PostDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  missingTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 8,
+  },
+  missingDescription: {
+    maxWidth: 300,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

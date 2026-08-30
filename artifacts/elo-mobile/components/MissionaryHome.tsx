@@ -100,7 +100,25 @@ export function MissionaryHome() {
           syncNow();
           refetch();
         }}
-        renderItem={({ item }) => <PostCard post={item} isMissionary={true} />}
+        renderItem={({ item }) => (
+          <PostCard
+            post={item}
+            isMissionary={true}
+            syncMessage={
+              item.status === 'PENDING_SYNC'
+                ? syncStatus === 'OFFLINE'
+                  ? 'Sem conexão — será enviada quando você voltar a ficar online'
+                  : syncStatus === 'WIFI_REQUIRED'
+                    ? 'Aguardando Wi‑Fi para enviar'
+                    : syncStatus === 'CHECKING_CONNECTION'
+                      ? 'Verificando conexão antes do envio'
+                      : 'Aguardando envio'
+                : item.status === 'SYNC_FAILED'
+                  ? 'Falha no envio — abra Sincronização para tentar novamente'
+                  : undefined
+            }
+          />
+        )}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>

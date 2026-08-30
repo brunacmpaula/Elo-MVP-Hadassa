@@ -15,9 +15,10 @@ import { useQueryClient } from '@tanstack/react-query';
 interface PostCardProps {
   post: Post;
   isMissionary?: boolean;
+  syncMessage?: string;
 }
 
-export function PostCard({ post, isMissionary }: PostCardProps) {
+export function PostCard({ post, isMissionary, syncMessage }: PostCardProps) {
   const colors = useColors();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -91,7 +92,7 @@ export function PostCard({ post, isMissionary }: PostCardProps) {
           <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + '20' }]}>
             <Feather name={getStatusIcon()} size={12} color={getStatusColor()} />
             <Text style={[styles.statusText, { color: getStatusColor() }]}>
-              {post.status === 'PENDING_SYNC' ? 'Aguardando' : 'Falhou'}
+              {post.status === 'PENDING_SYNC' ? 'Aguardando envio' : 'Falha no envio'}
             </Text>
           </View>
         )}
@@ -123,6 +124,15 @@ export function PostCard({ post, isMissionary }: PostCardProps) {
       <Text style={[styles.content, { color: colors.mutedForeground }]} numberOfLines={3}>
         {post.content}
       </Text>
+      {isMissionary && syncMessage && (
+        <Text
+          style={[styles.syncMessage, { color: getStatusColor() }]}
+          accessibilityLiveRegion="polite"
+          testID={`post-sync-message-${post.id}`}
+        >
+          {syncMessage}
+        </Text>
+      )}
 
       {post.media.length > 0 && (
         <View
@@ -211,6 +221,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Inter_400Regular',
     lineHeight: 22,
+    marginBottom: 16,
+  },
+  syncMessage: {
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    lineHeight: 19,
+    marginTop: -8,
     marginBottom: 16,
   },
   footer: {

@@ -65,14 +65,37 @@ export function getPendingOperations(queue: SyncOp[]): SyncOp[] {
   );
 }
 
+export function hasUnprocessedPendingOperations(
+  queue: SyncOp[],
+  processedOperationIds: ReadonlySet<string>,
+): boolean {
+  return getPendingOperations(queue).some(
+    (operation) => !processedOperationIds.has(operation.id),
+  );
+}
+
 export function markOperationSucceeded(
   state: SyncState,
   operationId: string,
+  _publishedPost: Post,
 ): SyncState {
   return {
     queue: state.queue.filter((operation) => operation.id !== operationId),
     localPosts: state.localPosts.filter((post) => post.id !== operationId),
   };
+}
+
+export function mergePublishedPost(
+  posts: Post[] | undefined,
+  publishedPost: Post,
+): Post[] {
+  return dedupePosts([
+    publishedPost,
+    ...(posts ?? []).filter((post) => post.id !== publishedPost.id),
+  ]).sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
 }
 
 export function getQueueSummary(queue: SyncOp[]): QueueSummary {
@@ -132,6 +155,22 @@ export function markOperationFailed(
     ),
     localPosts: state.localPosts.map((post) =>
       post.id === operationId ? { ...post, status: 'SYNC_FAILED' } : post,
+    ),
+  };
+}
+
+export function markOperationSyncing(
+  state: SyncState,
+  operationId: string,
+): SyncState {
+  return {
+    queue: state.queue.map((operation) =>
+      operation.id === operationId
+        ? { ...operation, status: 'SYNCING' }
+        : operation,
+    ),
+    localPosts: state.localPosts.map((post) =>
+      post.id === operationId ? { ...post, status: 'PENDING_SYNC' } : post,
     ),
   };
 }
