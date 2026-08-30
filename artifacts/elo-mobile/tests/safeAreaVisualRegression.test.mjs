@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { filterMissionaries } from '../lib/search.js';
 
 const testsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(testsDirectory, '..');
@@ -409,11 +410,8 @@ test('keeps both tab-bar modes safe on iPhone, Android and web', () => {
 
 test('keeps Explore search local, accessible, accent-insensitive, and privacy-aware', () => {
   assert.match(sources.explore, /useState<string>\(''\)/);
-  assert.match(sources.explore, /normalize\('NFD'\)/);
-  assert.match(sources.explore, /replace\(\/\[\\u0300-\\u036f\]\/g, ''\)/);
-  assert.match(sources.explore, /toLowerCase\(\)/);
-  assert.match(sources.explore, /trim\(\)/);
-  assert.match(sources.explore, /missionary\.name, missionary\.country/);
+  assert.match(sources.explore, /filterMissionaries, normalizeSearchText/);
+  assert.match(sources.explore, /from '\.\.\/\.\.\/lib\/search'/);
   assert.match(sources.explore, /visibleMissionaries \?\? \[\]/);
   assert.match(sources.explore, /placeholder="Buscar por nome ou região"/);
   assert.match(sources.explore, /accessibilityLabel="Buscar missionários por nome ou região"/);
@@ -425,6 +423,56 @@ test('keeps Explore search local, accessible, accent-insensitive, and privacy-aw
   assert.match(sources.explore, /paddingBottom: listBottomPadding/);
   assert.match(sources.explore, /Nenhum missionário encontrado\./);
   assert.match(sources.explore, /Tente buscar por outro nome ou região\./);
+});
+
+test('filters real missionary data through the Explore search interaction', () => {
+  const missionaries = [
+    {
+      id: 'missionary-ana',
+      name: 'Ana Silva',
+      country: 'Moçambique',
+    },
+    {
+      id: 'missionary-joao',
+      name: 'João Santos',
+      country: 'Brasil',
+    },
+    {
+      id: 'missionary-lucia',
+      name: 'Lúcia Nascimento',
+      country: 'Peru',
+    },
+    {
+      id: 'missionary-private-location',
+      name: 'Rita Esperança',
+    },
+  ];
+
+  assert.deepEqual(
+    filterMissionaries(missionaries, '  JOÃO  '),
+    [missionaries[1]],
+    'name matches should ignore case, accents, and surrounding whitespace',
+  );
+  assert.deepEqual(
+    filterMissionaries(missionaries, ' mocambique '),
+    [missionaries[0]],
+    'country matches should ignore case, accents, and surrounding whitespace',
+  );
+  assert.deepEqual(
+    filterMissionaries(missionaries, '  '),
+    missionaries,
+    'clearing the query should restore every missionary',
+  );
+  assert.deepEqual(
+    filterMissionaries(missionaries, 'argentina'),
+    [],
+    'an unmatched query should produce the empty state data',
+  );
+  assert.deepEqual(
+    filterMissionaries(missionaries, 'Portugal'),
+    [],
+    'a missionary with an omitted country must not match a hidden location',
+  );
 });
 
 for (const scenario of screenScenarios) {

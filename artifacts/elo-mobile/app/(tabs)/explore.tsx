@@ -26,14 +26,7 @@ import {
   hideCachedMissionaryFields,
   PUBLIC_PRIVACY_QUERY_OPTIONS,
 } from '../../lib/privacy';
-
-export function normalizeSearchText(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
+import { filterMissionaries, normalizeSearchText } from '../../lib/search';
 
 export default function ExploreScreen() {
   const colors = useColors();
@@ -57,18 +50,8 @@ export default function ExploreScreen() {
     : missionaries;
   const normalizedSearchQuery = normalizeSearchText(searchQuery);
   const filteredMissionaries = React.useMemo(() => {
-    const availableMissionaries = visibleMissionaries ?? [];
-
-    if (!normalizedSearchQuery) {
-      return availableMissionaries;
-    }
-
-    return availableMissionaries.filter((missionary) =>
-      [missionary.name, missionary.country].some(
-        (field) => field && normalizeSearchText(field).includes(normalizedSearchQuery),
-      ),
-    );
-  }, [normalizedSearchQuery, visibleMissionaries]);
+    return filterMissionaries(visibleMissionaries ?? [], searchQuery);
+  }, [searchQuery, visibleMissionaries]);
 
   useFocusEffect(
     React.useCallback(() => {
