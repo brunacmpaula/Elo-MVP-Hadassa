@@ -307,7 +307,8 @@ test('pins NativeTabs geometry to the supported Expo and iOS contract', () => {
 
 test('keeps the login brand text-only while preserving its entry controls', () => {
   assert.doesNotMatch(sources.login, /\bImage\b|elo-logo|Logo do Elo|styles\.logo/);
-  assert.match(sources.login, />Elo<\/Text>/);
+  assert.match(sources.login, />Elo414<\/Text>/);
+  assert.doesNotMatch(sources.login, /Como você deseja entrar/);
   assert.match(sources.login, /Mesmo longe, juntos na missão\./);
   assert.match(sources.login, /testID="login-as-missionary"/);
   assert.match(sources.login, /testID="login-as-supporter"/);

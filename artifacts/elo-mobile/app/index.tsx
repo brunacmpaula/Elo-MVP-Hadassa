@@ -32,17 +32,13 @@ export default function LoginScreen() {
     <AppSafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
         <View style={styles.brand}>
-          <Text style={[styles.title, { color: colors.foreground }]}>Elo</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>Elo414</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Mesmo longe, juntos na missão.
           </Text>
         </View>
 
         <View style={styles.actions}>
-          <Text style={[styles.label, { color: colors.foreground }]}>
-            Como você deseja entrar nesta demonstração?
-          </Text>
-
           <Button
             title="Sou Missionário"
             accessibilityLabel="Entrar como missionário"
