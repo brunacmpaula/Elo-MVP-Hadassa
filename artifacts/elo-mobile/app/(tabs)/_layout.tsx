@@ -20,12 +20,6 @@ function NativeTabLayout() {
         <Icon sf={{ default: 'house', selected: 'house.fill' }} />
         <Label>Início</Label>
       </NativeTabs.Trigger>
-      {!isMissionary && (
-        <NativeTabs.Trigger name="explore">
-          <Icon sf={{ default: 'magnifyingglass', selected: 'magnifyingglass' }} />
-          <Label>Descobrir</Label>
-        </NativeTabs.Trigger>
-      )}
       {isMissionary && (
         <NativeTabs.Trigger name="sync">
           <Icon sf={{ default: 'arrow.triangle.2.circlepath', selected: 'arrow.triangle.2.circlepath' }} />
@@ -48,7 +42,6 @@ function ClassicTabLayout() {
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
   const { user } = useAuth();
-  
   const isMissionary = user?.role === 'MISSIONARY';
 
   return (
@@ -58,6 +51,7 @@ function ClassicTabLayout() {
         tabBarInactiveTintColor: colors.mutedForeground,
         headerShown: false,
         tabBarStyle: {
+          display: isMissionary ? 'flex' : 'none',
           position: 'absolute',
           backgroundColor: isIOS ? 'transparent' : colors.background,
           borderTopWidth: isWeb ? 1 : 0,
@@ -96,19 +90,6 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Descobrir',
-          href: isMissionary ? null : '/explore',
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="magnifyingglass" tintColor={color} size={24} />
-            ) : (
-              <Feather name="search" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
         name="sync"
         options={{
           title: 'Fila',
@@ -125,7 +106,7 @@ function ClassicTabLayout() {
         name="profile"
         options={{
           title: 'Perfil',
-          href: '/profile',
+          href: !isMissionary ? null : '/profile',
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="person.crop.circle" tintColor={color} size={24} />
@@ -134,12 +115,20 @@ function ClassicTabLayout() {
             ),
         }}
       />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
+  const { user } = useAuth();
+  const isMissionary = user?.role === 'MISSIONARY';
+  if (isLiquidGlassAvailable() && isMissionary) {
     return <NativeTabLayout />;
   }
   return <ClassicTabLayout />;

@@ -1,0 +1,214 @@
+OBJETIVO PRINCIPAL
+
+Crie a interface do aplicativo reproduzindo com altíssima fidelidade o design da referência anexada. A imagem/PDF fornecida deve ser considerada a fonte visual principal e obrigatória. Não redesenhe livremente, não modernize, não substitua a identidade visual e não crie uma estética diferente.
+
+O objetivo é transformar o design apresentado na referência em uma interface real, responsiva e navegável, preservando sua aparência.
+
+1. IDENTIDADE VISUAL — PRIORIDADE MÁXIMA
+
+Observe cuidadosamente a referência anexada e reproduza:
+
+paleta de cores;
+fundo creme/off-white;
+tons de verde;
+verde-claro dos cards;
+vermelho escuro/bordô dos pequenos botões;
+tipografia arredondada e amigável;
+espessuras;
+proporções;
+espaçamentos;
+cantos extremamente arredondados;
+formato dos cards;
+estilo minimalista dos ícones;
+distribuição dos elementos;
+hierarquia visual;
+aparência orgânica e acolhedora.
+
+NÃO substitua o design por componentes genéricos de aplicativo.
+
+Não quero uma interpretação do layout. Quero uma implementação visualmente muito próxima da referência.
+
+2. ESTRUTURA SUPERIOR
+
+No topo existe uma área de perfil.
+
+Ela contém:
+
+foto circular do usuário à esquerda;
+nome do usuário em destaque;
+abaixo, a mensagem “Bem-vinda de volta!” ou “Bem-vindo de volta!”, conforme o usuário;
+ícone de perfil/conta no lado direito.
+
+O fundo dessa região possui uma forma bege clara grande, arredondada e orgânica, exatamente como na referência.
+
+Essa forma NÃO deve ser transformada em um simples retângulo ou navbar tradicional.
+
+3. NAVEGAÇÃO PRINCIPAL
+
+Logo abaixo do cabeçalho existem quatro abas principais, representadas por ícones:
+
+Pesquisa/Descobrir — ícone de lupa.
+Oração — ícone de mãos em oração.
+Saúde/Ajuda — ícone de cruz.
+Alimentação — ícone de prato/talheres.
+
+Os quatro ícones devem permanecer distribuídos horizontalmente, seguindo exatamente a lógica visual da referência.
+
+Existe um detalhe FUNDAMENTAL:
+
+a aba selecionada é indicada por uma extensão arredondada do próprio fundo bege do cabeçalho.
+
+Na referência anexada, a aba ativa é Oração, portanto essa extensão bege desce do cabeçalho e envolve visualmente a região atrás do ícone das mãos.
+
+Isso funciona como um indicador de navegação.
+
+NÃO use underline, bolinha, mudança aleatória de cor, quadrado ou navbar convencional para indicar a aba ativa.
+
+Ao trocar de aba, essa extensão/pontinha arredondada deve mudar de posição horizontalmente, ficando atrás da nova aba selecionada:
+
+Pesquisa selecionada → extensão sob a lupa;
+Oração selecionada → extensão sob as mãos;
+Saúde selecionada → extensão sob a cruz;
+Alimentação selecionada → extensão sob prato/talheres.
+
+Preferencialmente, faça essa movimentação com uma transição curta e suave, sem exagero.
+
+4. TELA DE ORAÇÃO
+
+Esta é a tela mostrada na referência.
+
+O título central é:
+
+“A quem posso abençoar hoje?”
+
+Abaixo existe um feed vertical rolável de pedidos de oração.
+
+Cada publicação deve seguir o formato visual da referência:
+
+card externo verde-claro;
+cantos muito arredondados;
+pequena etiqueta clara na região superior contendo o @username;
+área interna creme/off-white;
+texto do pedido de oração em verde;
+botão pequeno vermelho/bordô escrito “Oração”;
+espaçamento generoso entre os cards.
+
+Exemplos de conteúdo presentes na referência incluem pedidos relacionados a missionários, pessoas feridas e comunidades que necessitam de oração. Preserve essa lógica de conteúdo.
+
+O feed deve possuir scroll vertical.
+
+O cabeçalho e a navegação principal podem permanecer fixos enquanto o conteúdo é rolado, desde que isso preserve a aparência da referência.
+
+5. BOTÃO HOME FLUTUANTE
+
+No canto inferior direito existe um botão flutuante em formato de cápsula bege clara contendo um ícone verde de casa.
+
+Ele deve permanecer fixo no canto inferior direito.
+
+IMPORTANTE: na imagem de referência aparecem também um ícone de mulher e um ícone relacionado a uma planta próximos dessa área. Não os deixe permanentemente visíveis como aparecem acidentalmente na referência.
+
+Eles fazem parte de um menu expansível do botão Home.
+
+Estado padrão:
+
+somente a casinha aparece.
+
+Ao clicar/tocar na casinha:
+
+o menu deve expandir verticalmente para cima, revelando dois botões adicionais:
+
+Botão 1 — Mulher
+
+Ícone minimalista representando uma mulher.
+
+Destino futuro: comunidade de mulheres.
+
+Botão 2 — Bíblia
+
+Utilize o ícone visual fornecido/referenciado no design (o elemento associado à plantinha), mantendo a identidade visual.
+
+Destino futuro: área de Bíblia.
+
+Neste momento, NÃO é necessário desenvolver o conteúdo completo dessas duas áreas. Apenas prepare os botões e sua estrutura de navegação.
+
+Quando o usuário tocar novamente na casinha, o menu deve recolher e os dois botões devem desaparecer.
+
+A animação deve ser simples: os botões sobem verticalmente a partir da região da Home e desaparecem novamente ao fechar.
+
+Não transforme isso em menu lateral, bottom navigation bar ou modal.
+
+6. CADASTRO E TIPO DE USUÁRIO
+
+Antes dessa interface existe uma etapa de cadastro/login.
+
+Crie uma tela de cadastro visualmente coerente com EXATAMENTE a mesma identidade visual da referência:
+
+fundo creme;
+verde predominante;
+elementos arredondados;
+detalhes bege;
+tipografia semelhante;
+visual acolhedor e minimalista.
+
+Não crie um estilo visual novo para o cadastro.
+
+Durante o cadastro deve existir a possibilidade de o usuário selecionar seu perfil/tipo de participação.
+
+Um dos tipos é:
+
+Apoiadora/Apoiador
+
+Após concluir o cadastro como apoiador(a), o usuário deve entrar nessa experiência de navegação.
+
+7. RESPONSIVIDADE
+
+A referência representa uma interface mobile.
+
+Desenvolva primeiro para smartphone (mobile-first).
+
+Preserve as proporções do design em diferentes tamanhos de tela. Não deixe cards, textos ou ícones encostarem nas bordas.
+
+O feed deve aproveitar a largura disponível mantendo margens laterais semelhantes às da referência.
+
+8. ÍCONES
+
+Utilize ícones minimalistas e visualmente muito próximos aos da referência.
+
+Evite ícones preenchidos excessivamente modernos, gradientes, sombras fortes ou elementos 3D.
+
+A interface deve continuar parecendo parte do mesmo projeto visual criado no arquivo de referência.
+
+9. O QUE NÃO FAZER
+
+NÃO:
+
+redesenhar a interface com outra identidade;
+trocar a paleta de cores;
+adicionar gradientes;
+adicionar sombras fortes;
+transformar o cabeçalho em navbar convencional;
+criar uma bottom navigation bar;
+deixar os botões Mulher e Bíblia permanentemente visíveis;
+inventar novas funções sem necessidade;
+alterar o formato dos cards;
+substituir os ícones principais;
+mudar a hierarquia visual;
+deixar a interface com aparência genérica de template;
+adicionar elementos decorativos não presentes na identidade visual;
+mudar a localização dos quatro ícones principais.
+
+10. PRIORIDADE DE IMPLEMENTAÇÃO
+
+Se houver qualquer conflito entre estas instruções e decisões automáticas de design, siga esta ordem:
+
+1º — fidelidade visual à referência anexada;
+2º — estrutura e posicionamento dos elementos;
+3º — comportamento das interações descritas;
+4º — responsividade;
+5º — qualquer decisão criativa adicional.
+
+A referência anexada deve ser tratada praticamente como um mockup que precisa ser convertido em interface, e não apenas como uma inspiração.
+
+O resultado final deve fazer alguém olhar para a referência e para o aplicativo lado a lado e perceber imediatamente que se trata do mesmo design e da mesma identidade visual.
+
+E um detalhe importante, Bella: eu não pediria para a IA desenvolver demais as outras telas agora. Como você é responsável pelo design e as meninas vão cuidar do desenvolvimento, quanto mais ela inventar tela, maior a chance de começar a fugir do que você desenhou. Eu usaria essa tela de oração como “design system visual” para ela entender como o restante deve parecer.

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
 import { useColors } from '../hooks/useColors';
@@ -31,35 +31,38 @@ export default function LoginScreen() {
   return (
     <AppSafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        <View style={styles.brand}>
+        <View style={[styles.brandHeader, { backgroundColor: colors.secondary }]}>
           <Text style={[styles.title, { color: colors.foreground }]}>Elo</Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+          <Text style={[styles.subtitle, { color: colors.primary }]}>
             Mesmo longe, juntos na missão.
           </Text>
         </View>
 
         <View style={styles.actions}>
-          <Text style={[styles.label, { color: colors.foreground }]}>
-            Como você deseja entrar nesta demonstração?
+          <Text style={[styles.label, { color: colors.primary }]}>
+            Como você deseja participar?
           </Text>
-          
+
+          <Button
+            title="Apoiadora/Apoiador"
+            accessibilityLabel="Entrar como apoiador"
+            icon="heart"
+            variant="primary"
+            fullWidth
+            onPress={() => loginAs('SUPPORTER')}
+            testID="login-as-supporter"
+            style={styles.actionButton}
+          />
+
           <Button
             title="Sou Missionário"
             accessibilityLabel="Entrar como missionário"
             icon="send"
+            variant="secondary"
             fullWidth
             onPress={() => loginAs('MISSIONARY')}
             testID="login-as-missionary"
-          />
-          
-          <Button
-            title="Sou Apoiador"
-            accessibilityLabel="Entrar como apoiador"
-            icon="heart"
-            variant="outline"
-            fullWidth
-            onPress={() => loginAs('SUPPORTER')}
-            testID="login-as-supporter"
+            style={styles.actionButton}
           />
         </View>
       </View>
@@ -84,28 +87,35 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  brand: {
+  brandHeader: {
     alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    borderRadius: 32,
     marginBottom: 48,
   },
   title: {
-    fontSize: 40,
+    fontSize: 48,
     fontFamily: 'Inter_700Bold',
-    letterSpacing: -1,
+    letterSpacing: -1.5,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 18,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'Inter_500Medium',
     textAlign: 'center',
   },
   actions: {
     gap: 16,
   },
+  actionButton: {
+    borderRadius: 32,
+    paddingVertical: 18,
+  },
   label: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'Inter_500Medium',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
   },
 });
