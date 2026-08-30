@@ -1,11 +1,11 @@
-import React from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
-import { useAuth } from "../context/AuthContext";
-import { Button } from "../components/Button";
-import { useColors } from "../hooks/useColors";
-import { AppSafeAreaView } from "../components/AppSafeAreaView";
-import { Feather } from "@expo/vector-icons";
-import { Redirect } from "expo-router";
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { useAuth } from '../context/AuthContext';
+import { Button } from '../components/Button';
+import { useColors } from '../hooks/useColors';
+import { AppSafeAreaView } from '../components/AppSafeAreaView';
+import { Feather } from '@expo/vector-icons';
+import { Redirect } from 'expo-router';
 
 export default function LoginScreen() {
   const { user, loginAs, isLoading, isLoggingOut } = useAuth();
@@ -29,46 +29,37 @@ export default function LoginScreen() {
   }
 
   return (
-    <AppSafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
+    <AppSafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        <View
-          style={[styles.brandHeader, { backgroundColor: colors.secondary }]}
-        >
-          <Text style={[styles.title, { color: colors.foreground }]}>
-            ELO 414
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.primary }]}>
+        <View style={styles.brand}>
+          <Text style={[styles.title, { color: colors.foreground }]}>Elo</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Mesmo longe, juntos na missão.
           </Text>
         </View>
 
         <View style={styles.actions}>
-          <Text style={[styles.label, { color: colors.primary }]}>
-            Como você deseja participar?
+          <Text style={[styles.label, { color: colors.foreground }]}>
+            Como você deseja entrar nesta demonstração?
           </Text>
-
-          <Button
-            title="Apoiadora/Apoiador"
-            accessibilityLabel="Entrar como apoiador"
-            icon="heart"
-            variant="primary"
-            fullWidth
-            onPress={() => loginAs("SUPPORTER")}
-            testID="login-as-supporter"
-            style={styles.actionButton}
-          />
 
           <Button
             title="Sou Missionário"
             accessibilityLabel="Entrar como missionário"
             icon="send"
-            variant="secondary"
             fullWidth
-            onPress={() => loginAs("MISSIONARY")}
+            onPress={() => loginAs('MISSIONARY')}
             testID="login-as-missionary"
-            style={styles.actionButton}
+          />
+
+          <Button
+            title="Sou Apoiador"
+            accessibilityLabel="Entrar como apoiador"
+            icon="heart"
+            variant="outline"
+            fullWidth
+            onPress={() => loginAs('SUPPORTER')}
+            testID="login-as-supporter"
           />
         </View>
       </View>
@@ -79,49 +70,42 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   center: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   container: {
     flex: 1,
   },
   content: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
     padding: 24,
     maxWidth: 400,
-    width: "100%",
-    alignSelf: "center",
+    width: '100%',
+    alignSelf: 'center',
   },
-  brandHeader: {
-    alignItems: "center",
-    paddingVertical: 48,
-    paddingHorizontal: 24,
-    borderRadius: 32,
+  brand: {
+    alignItems: 'center',
     marginBottom: 48,
   },
   title: {
-    fontSize: 48,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: -1.5,
+    fontSize: 40,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -1,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 18,
-    fontFamily: "Inter_500Medium",
-    textAlign: "center",
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
   },
   actions: {
     gap: 16,
   },
-  actionButton: {
-    borderRadius: 32,
-    paddingVertical: 18,
-  },
   label: {
-    fontSize: 18,
-    fontFamily: "Inter_500Medium",
-    textAlign: "center",
-    marginBottom: 16,
+    fontSize: 16,
+    fontFamily: 'Inter_500Medium',
+    textAlign: 'center',
+    marginBottom: 8,
   },
 });

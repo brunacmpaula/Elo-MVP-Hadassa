@@ -20,6 +20,12 @@ function NativeTabLayout() {
         <Icon sf={{ default: 'house', selected: 'house.fill' }} />
         <Label>Início</Label>
       </NativeTabs.Trigger>
+      {!isMissionary && (
+        <NativeTabs.Trigger name="explore">
+          <Icon sf={{ default: 'magnifyingglass', selected: 'magnifyingglass' }} />
+          <Label>Descobrir</Label>
+        </NativeTabs.Trigger>
+      )}
       {isMissionary && (
         <NativeTabs.Trigger name="sync">
           <Icon sf={{ default: 'arrow.triangle.2.circlepath', selected: 'arrow.triangle.2.circlepath' }} />
@@ -27,8 +33,8 @@ function NativeTabLayout() {
         </NativeTabs.Trigger>
       )}
       <NativeTabs.Trigger name="profile">
-          <Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
-          <Label>Perfil</Label>
+        <Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
+        <Label>Perfil</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -51,7 +57,6 @@ function ClassicTabLayout() {
         tabBarInactiveTintColor: colors.mutedForeground,
         headerShown: false,
         tabBarStyle: {
-          display: isMissionary ? 'flex' : 'none',
           position: 'absolute',
           backgroundColor: isIOS ? 'transparent' : colors.background,
           borderTopWidth: isWeb ? 1 : 0,
@@ -90,6 +95,19 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="explore"
+        options={{
+          title: 'Descobrir',
+          href: isMissionary ? null : '/explore',
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="magnifyingglass" tintColor={color} size={24} />
+            ) : (
+              <Feather name="search" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
         name="sync"
         options={{
           title: 'Fila',
@@ -106,7 +124,7 @@ function ClassicTabLayout() {
         name="profile"
         options={{
           title: 'Perfil',
-          href: !isMissionary ? null : '/profile',
+          href: '/profile',
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="person.crop.circle" tintColor={color} size={24} />
@@ -115,20 +133,12 @@ function ClassicTabLayout() {
             ),
         }}
       />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }
 
 export default function TabLayout() {
-  const { user } = useAuth();
-  const isMissionary = user?.role === 'MISSIONARY';
-  if (isLiquidGlassAvailable() && isMissionary) {
+  if (isLiquidGlassAvailable()) {
     return <NativeTabLayout />;
   }
   return <ClassicTabLayout />;
