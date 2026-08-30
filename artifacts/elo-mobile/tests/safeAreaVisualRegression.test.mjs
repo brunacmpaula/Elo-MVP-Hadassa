@@ -603,6 +603,77 @@ test('keeps native image selection capped at four with visible previews', () => 
   );
 });
 
+test('shows the contribution CTA only to supporters on need posts', () => {
+  assert.match(
+    sources.postDetail,
+    /user\?\.role === 'SUPPORTER' && visiblePost\.type === 'NEED'/,
+    'need contribution CTA must be restricted to supporters',
+  );
+  assert.match(
+    sources.postDetail,
+    /title="Quero contribuir"/,
+    'need contribution CTA must use the standardized label',
+  );
+  assert.match(
+    sources.postDetail,
+    /accessibilityLabel="Quero contribuir"/,
+    'need contribution CTA must expose an accessible label',
+  );
+  assert.match(
+    sources.postDetail,
+    /testID="demo-contribution"/,
+    'need contribution CTA must expose a stable selector',
+  );
+  assert.match(
+    sources.postDetail,
+    /title=\{visiblePost\.prayedByMe \? 'Estou Orando' : 'Orar'\}/,
+    'need posts must keep the prayer action and state label',
+  );
+  assert.match(
+    sources.postDetail,
+    /prayerCount \+ 1/,
+    'need posts must keep the optimistic prayer count behavior',
+  );
+  assert.match(
+    sources.postDetail,
+    /Alert\.alert\(\s*'Contribuição demonstrativa',\s*'Sua disponibilidade foi registrada apenas como demonstração\. Nenhum valor ou dado financeiro será solicitado\.'/,
+    'the contribution CTA must provide a clear demonstration-only confirmation',
+  );
+  assert.doesNotMatch(
+    sources.postDetail,
+    /visiblePost\.type === '(?:UPDATE|PRAYER_REQUEST)'[\s\S]*?demo-contribution/,
+    'updates and prayer requests must not opt into contribution CTA rendering',
+  );
+});
+
+test('standardizes the missionary profile contribution CTA without widening its role gate', () => {
+  assert.match(
+    sources.missionaryDetail,
+    /\{user\?\.role === 'SUPPORTER' && \(/,
+    'missionary profile actions must remain supporter-only',
+  );
+  assert.match(
+    sources.missionaryDetail,
+    /title="Quero contribuir"/,
+    'missionary profile must use the standardized contribution label',
+  );
+  assert.match(
+    sources.missionaryDetail,
+    /accessibilityLabel="Quero contribuir"/,
+    'missionary profile contribution CTA must expose an accessible label',
+  );
+  assert.match(
+    sources.missionaryDetail,
+    /testID="demo-contribution"/,
+    'missionary profile contribution CTA must keep a stable selector',
+  );
+  assert.match(
+    sources.missionaryDetail,
+    /Alert\.alert\(\s*'Contribuição demonstrativa',\s*'Sua disponibilidade foi registrada apenas como demonstração\. Nenhum valor ou dado financeiro será solicitado\.'/,
+    'missionary profile must keep the demonstration-only confirmation',
+  );
+});
+
 test('keeps the native image-picker runner aligned with app selectors and payload checks', () => {
   assert.match(sources.compose, /testID=\{`post-type-\$\{item\.value\.toLowerCase\(\)\}`\}/);
   assert.match(sources.compose, /testID="title-publication"/);

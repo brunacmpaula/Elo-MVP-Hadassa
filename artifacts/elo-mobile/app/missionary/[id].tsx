@@ -100,15 +100,16 @@ export default function MissionaryProfileScreen() {
                 testID="follow-missionary"
               />
               <Button
-                title="Contribuir"
+                title="Quero contribuir"
                 icon="gift"
                 variant="outline"
                 onPress={() =>
                   Alert.alert(
                     'Contribuição demonstrativa',
-                    'Esta ação é apenas uma demonstração. Nenhum valor ou dado financeiro será solicitado.',
+                    'Sua disponibilidade foi registrada apenas como demonstração. Nenhum valor ou dado financeiro será solicitado.',
                   )
                 }
+                accessibilityLabel="Quero contribuir"
                 testID="demo-contribution"
               />
             </>

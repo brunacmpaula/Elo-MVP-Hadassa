@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, TextInput, Alert } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   useCreatePostComment,
@@ -87,6 +87,13 @@ export default function PostDetailScreen() {
     }
   };
 
+  const handleDemoContribution = () => {
+    Alert.alert(
+      'Contribuição demonstrativa',
+      'Sua disponibilidade foi registrada apenas como demonstração. Nenhum valor ou dado financeiro será solicitado.',
+    );
+  };
+
   if (isLoading || !visiblePost) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
@@ -154,6 +161,17 @@ export default function PostDetailScreen() {
           onPress={handlePray}
           testID="pray-for-post"
         />
+        {user?.role === 'SUPPORTER' && visiblePost.type === 'NEED' && (
+          <Button
+            title="Quero contribuir"
+            icon="gift"
+            variant="outline"
+            fullWidth
+            onPress={handleDemoContribution}
+            accessibilityLabel="Quero contribuir"
+            testID="demo-contribution"
+          />
+        )}
       </View>
 
       <View style={[styles.comments, { borderTopColor: colors.border }]}>
