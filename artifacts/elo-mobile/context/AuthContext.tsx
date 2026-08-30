@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getMissionaryPreferences,
@@ -11,6 +17,7 @@ import {
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { clearPersistedSession } from '../lib/authSession';
 
 export type ProfileField = 'email' | 'location' | 'bio';
 export type ProfilePreferences = ApiProfilePreferences;
@@ -30,6 +37,7 @@ setAuthTokenGetter(() => AsyncStorage.getItem(TOKEN_STORAGE_KEY));
 type AuthContextType = {
   user: DemoUser | null;
   isLoading: boolean;
+  isLoggingOut: boolean;
   loginAs: (role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
   profilePreferences: ProfilePreferences;
@@ -44,10 +52,12 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<DemoUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [profilePreferences, setProfilePreferences] =
     useState<ProfilePreferences>(DEFAULT_PROFILE_PREFERENCES);
   const queryClient = useQueryClient();
   const router = useRouter();
+  const logoutPromiseRef = useRef<Promise<void> | null>(null);
 
   const cacheProfilePreferences = async (preferences: ProfilePreferences) => {
     setProfilePreferences(preferences);
@@ -74,12 +84,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const [storedUser, storedPreferences] = await Promise.all([
+        const [storedUser, storedToken, storedPreferences] = await Promise.all([
           AsyncStorage.getItem(USER_STORAGE_KEY),
+          AsyncStorage.getItem(TOKEN_STORAGE_KEY),
           AsyncStorage.getItem(PROFILE_PREFERENCES_STORAGE_KEY),
         ]);
 
-        if (!storedUser) return;
+        if (!storedUser || !storedToken) return;
         const restoredUser = JSON.parse(storedUser) as DemoUser;
         setUser(restoredUser);
         if (storedPreferences) {
@@ -115,16 +126,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace('/(tabs)');
   };
 
-  const logout = async () => {
-    setUser(null);
-    setProfilePreferences(DEFAULT_PROFILE_PREFERENCES);
-    await Promise.all([
-      AsyncStorage.removeItem(USER_STORAGE_KEY),
-      AsyncStorage.removeItem(TOKEN_STORAGE_KEY),
-      AsyncStorage.removeItem(PROFILE_PREFERENCES_STORAGE_KEY),
-    ]);
-    queryClient.clear();
-    router.replace('/');
+  const logout = () => {
+    if (logoutPromiseRef.current) return logoutPromiseRef.current;
+
+    const logoutPromise = (async () => {
+      setIsLoggingOut(true);
+      try {
+        // Keep the authenticated tree mounted until persistence is gone. This
+        // prevents the tabs from rendering a user-less screen mid-transition.
+        await clearPersistedSession(AsyncStorage);
+        queryClient.clear();
+        setUser(null);
+        setProfilePreferences(DEFAULT_PROFILE_PREFERENCES);
+        router.replace('/');
+        // Let the root navigator render its logout transition before the
+        // authenticated tree is mounted again at the login route.
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      } finally {
+        setIsLoggingOut(false);
+        logoutPromiseRef.current = null;
+      }
+    })();
+
+    logoutPromiseRef.current = logoutPromise;
+    return logoutPromise;
   };
 
   const refreshProfilePreferences = async () => {
@@ -173,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isLoading,
+        isLoggingOut,
         loginAs,
         logout,
         profilePreferences,

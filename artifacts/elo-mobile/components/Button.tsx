@@ -50,6 +50,10 @@ export function Button({ onPress, title, icon, variant = 'primary', size = 'md',
       onPress={handlePress}
       disabled={disabled || loading}
       accessibilityLabel={accessibilityLabel || title}
+      accessibilityState={{
+        disabled: disabled || loading,
+        busy: loading,
+      }}
       testID={testID}
       accessibilityRole="button"
       style={({ pressed }) => [

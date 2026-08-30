@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -18,6 +19,9 @@ import { setBaseUrl } from '@workspace/api-client-react';
 import { AuthProvider } from '../context/AuthContext';
 import { OfflineProvider } from '../context/OfflineContext';
 import { SyncProvider } from '../context/SyncContext';
+import { AppSafeAreaView } from '../components/AppSafeAreaView';
+import { useAuth } from '../context/AuthContext';
+import { useColors } from '../hooks/useColors';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -34,7 +38,24 @@ if (process.env.EXPO_PUBLIC_DOMAIN) {
   setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 }
 
+function LogoutTransition() {
+  const colors = useColors();
+
+  return (
+    <AppSafeAreaView
+      testID="logout-transition-screen"
+      style={[styles.logoutTransition, { backgroundColor: colors.background }]}
+    >
+      <ActivityIndicator color={colors.primary} />
+    </AppSafeAreaView>
+  );
+}
+
 function RootLayoutNav() {
+  const { isLoggingOut, user } = useAuth();
+
+  if (isLoggingOut && !user) return <LogoutTransition />;
+
   return (
     <Stack screenOptions={{ headerShown: false, headerBackTitle: 'Voltar' }}>
       <Stack.Screen name="index" />
@@ -44,6 +65,14 @@ function RootLayoutNav() {
     </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  logoutTransition: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

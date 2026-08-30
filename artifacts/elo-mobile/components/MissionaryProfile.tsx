@@ -95,12 +95,14 @@ export function MissionaryProfile() {
   );
   const [isSavingNotificationAudience, setIsSavingNotificationAudience] =
     React.useState(false);
+  const [logoutError, setLogoutError] = React.useState<string | null>(null);
   const {
     user,
     profilePreferences,
     refreshProfilePreferences,
     setWomenOnlyNotifications,
     logout,
+    isLoggingOut,
   } = useAuth();
   const listBottomPadding = 24;
   // The tab bar is absolute, so the fixed account action needs its own
@@ -121,6 +123,15 @@ export function MissionaryProfile() {
     } finally {
       setIsSavingNotificationAudience(false);
     }
+  };
+
+  const handleLogout = () => {
+    setLogoutError(null);
+    logout().catch(() => {
+      setLogoutError(
+        'Não foi possível sair agora. Verifique sua conexão e tente novamente.',
+      );
+    });
   };
 
   useFocusEffect(
@@ -315,10 +326,19 @@ export function MissionaryProfile() {
           icon="log-out"
           variant="outline"
           fullWidth
-          onPress={logout}
+          onPress={handleLogout}
+          loading={isLoggingOut}
           accessibilityLabel="Sair da conta"
           testID="missionary-logout"
         />
+        {logoutError && (
+          <Text
+            style={[styles.logoutError, { color: colors.accent }]}
+            accessibilityRole="alert"
+          >
+            {logoutError}
+          </Text>
+        )}
       </View>
     </AppSafeAreaView>
   );
@@ -481,5 +501,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
     lineHeight: 19,
+  },
+  logoutError: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });

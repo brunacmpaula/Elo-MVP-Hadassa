@@ -8,9 +8,19 @@ import { useColors } from '../hooks/useColors';
 
 export function SupporterProfile() {
   const colors = useColors();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoggingOut } = useAuth();
+  const [logoutError, setLogoutError] = React.useState<string | null>(null);
   const bottomPadding = useTabContentBottomPadding(90);
   if (!user) return null;
+
+  const handleLogout = () => {
+    setLogoutError(null);
+    logout().catch(() => {
+      setLogoutError(
+        'Não foi possível sair agora. Verifique sua conexão e tente novamente.',
+      );
+    });
+  };
 
   const initials = user.name
     .split(' ')
@@ -49,9 +59,19 @@ export function SupporterProfile() {
           icon="log-out"
           variant="outline"
           fullWidth
-          onPress={logout}
+          onPress={handleLogout}
+          loading={isLoggingOut}
+          accessibilityLabel="Sair da conta"
           testID="supporter-logout"
         />
+        {logoutError && (
+          <Text
+            style={[styles.logoutError, { color: colors.accent }]}
+            accessibilityRole="alert"
+          >
+            {logoutError}
+          </Text>
+        )}
       </ScrollView>
     </AppSafeAreaView>
   );
@@ -70,4 +90,10 @@ const styles = StyleSheet.create({
   roleText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   email: { fontSize: 14, fontFamily: 'Inter_400Regular' },
   hint: { fontSize: 14, lineHeight: 21, fontFamily: 'Inter_400Regular' },
+  logoutError: {
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+  },
 });

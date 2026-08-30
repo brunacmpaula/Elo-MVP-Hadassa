@@ -8,10 +8,10 @@ import { Feather } from '@expo/vector-icons';
 import { Redirect } from 'expo-router';
 
 export default function LoginScreen() {
-  const { user, loginAs, isLoading } = useAuth();
+  const { user, loginAs, isLoading, isLoggingOut } = useAuth();
   const colors = useColors();
 
-  if (isLoading) {
+  if (isLoading || isLoggingOut) {
     return (
       <AppSafeAreaView
         testID="login-screen"
