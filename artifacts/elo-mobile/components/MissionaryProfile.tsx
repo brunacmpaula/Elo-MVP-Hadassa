@@ -10,6 +10,7 @@ import { Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { useAuth, type ProfileField } from '../context/AuthContext';
+import { useOfflineMode } from '../context/OfflineContext';
 import { useColors } from '../hooks/useColors';
 import { Button } from './Button';
 
@@ -18,6 +19,8 @@ type VisibilityRowProps = {
   label: string;
   value: string;
   icon: keyof typeof Feather.glyphMap;
+  onSaveError: (message: string) => void;
+  onSaveStart: () => void;
 };
 
 function VisibilityRow({
@@ -25,10 +28,30 @@ function VisibilityRow({
   label,
   value,
   icon,
+  onSaveError,
+  onSaveStart,
 }: VisibilityRowProps) {
   const colors = useColors();
   const { isFieldVisible, setFieldVisibility } = useAuth();
+  const { isOfflineMode } = useOfflineMode();
+  const [isSaving, setIsSaving] = React.useState(false);
   const visible = isFieldVisible(field);
+
+  const handleVisibilityChange = async (nextValue: boolean) => {
+    onSaveStart();
+    setIsSaving(true);
+    try {
+      await setFieldVisibility(field, nextValue);
+    } catch {
+      onSaveError(
+        isOfflineMode
+          ? 'Você está sem conexão. Mantivemos a última preferência salva. Tente novamente quando a internet voltar.'
+          : 'Mantivemos a última preferência salva. Verifique sua conexão e tente novamente.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <View style={[styles.row, { borderBottomColor: colors.border }]}>
@@ -48,12 +71,14 @@ function VisibilityRow({
       </View>
       <Switch
         value={visible}
-        onValueChange={(nextValue) => setFieldVisibility(field, nextValue)}
+        onValueChange={handleVisibilityChange}
+        disabled={isSaving}
         trackColor={{ false: colors.border, true: colors.secondary }}
         thumbColor={visible ? colors.primary : colors.mutedForeground}
         accessibilityRole="switch"
         accessibilityLabel={`${visible ? 'Ocultar' : 'Exibir'} ${label}`}
         accessibilityState={{ checked: visible }}
+        testID={`profile-visibility-${field}`}
       />
     </View>
   );
@@ -61,6 +86,12 @@ function VisibilityRow({
 
 export function MissionaryProfile() {
   const colors = useColors();
+  const { isOfflineMode } = useOfflineMode();
+  const [privacySaveError, setPrivacySaveError] = React.useState<string | null>(
+    null,
+  );
+  const [isSavingNotificationAudience, setIsSavingNotificationAudience] =
+    React.useState(false);
   const {
     user,
     profilePreferences,
@@ -68,6 +99,22 @@ export function MissionaryProfile() {
     setWomenOnlyNotifications,
     logout,
   } = useAuth();
+
+  const handleNotificationAudienceChange = async (enabled: boolean) => {
+    setPrivacySaveError(null);
+    setIsSavingNotificationAudience(true);
+    try {
+      await setWomenOnlyNotifications(enabled);
+    } catch {
+      setPrivacySaveError(
+        isOfflineMode
+          ? 'Você está sem conexão. Mantivemos o último público salvo. Tente novamente quando a internet voltar.'
+          : 'Mantivemos o último público salvo. Verifique sua conexão e tente novamente.',
+      );
+    } finally {
+      setIsSavingNotificationAudience(false);
+    }
+  };
 
   useFocusEffect(
     React.useCallback(() => {
@@ -137,6 +184,32 @@ export function MissionaryProfile() {
           </Text>
         </View>
 
+        {privacySaveError && (
+          <View
+            style={[
+              styles.saveError,
+              { backgroundColor: colors.muted, borderColor: colors.accent },
+            ]}
+            accessibilityRole="alert"
+            testID="privacy-save-error"
+          >
+            <Feather name="alert-circle" size={20} color={colors.accent} />
+            <View style={styles.saveErrorCopy}>
+              <Text style={[styles.saveErrorTitle, { color: colors.foreground }]}>
+                Não foi possível salvar
+              </Text>
+              <Text
+                style={[
+                  styles.saveErrorDescription,
+                  { color: colors.mutedForeground },
+                ]}
+              >
+                {privacySaveError}
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View
           style={[
             styles.settingsCard,
@@ -148,18 +221,24 @@ export function MissionaryProfile() {
             label="E-mail"
             value={user.email}
             icon="mail"
+            onSaveStart={() => setPrivacySaveError(null)}
+            onSaveError={setPrivacySaveError}
           />
           <VisibilityRow
             field="location"
             label="Localização"
             value="Maputo, Moçambique"
             icon="map-pin"
+            onSaveStart={() => setPrivacySaveError(null)}
+            onSaveError={setPrivacySaveError}
           />
           <VisibilityRow
             field="bio"
             label="Sobre sua missão"
             value="Servindo famílias e formando lideranças locais."
             icon="heart"
+            onSaveStart={() => setPrivacySaveError(null)}
+            onSaveError={setPrivacySaveError}
           />
         </View>
 
@@ -190,7 +269,8 @@ export function MissionaryProfile() {
               </View>
               <Switch
                 value={profilePreferences.womenOnlyNotifications}
-                onValueChange={setWomenOnlyNotifications}
+                onValueChange={handleNotificationAudienceChange}
+                disabled={isSavingNotificationAudience}
                 trackColor={{ false: colors.border, true: colors.accent + '65' }}
                 thumbColor={
                   profilePreferences.womenOnlyNotifications
@@ -202,6 +282,7 @@ export function MissionaryProfile() {
                 accessibilityState={{
                   checked: profilePreferences.womenOnlyNotifications,
                 }}
+                testID="women-only-notifications"
               />
             </View>
           </>
@@ -297,6 +378,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 20,
     paddingHorizontal: 16,
+  },
+  saveError: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  saveErrorCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  saveErrorTitle: {
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+  },
+  saveErrorDescription: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 19,
   },
   row: {
     minHeight: 78,
